@@ -6,41 +6,44 @@
 
 @layer base {
   :root {
-    --background: 0 0% 7%;
+    --background: 240 3% 7%;
     --foreground: 0 0% 100%;
 
-    --card: 0 0% 10%;
+    --card: 240 3% 10%;
     --card-foreground: 0 0% 100%;
 
-    --popover: 0 0% 10%;
+    --popover: 240 3% 10%;
     --popover-foreground: 0 0% 100%;
 
-    --primary: 205 100% 42%;
+    --primary: 201 100% 38%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 189 100% 48%;
-    --secondary-foreground: 0 0% 100%;
+    --secondary: 186 100% 50%;
+    --secondary-foreground: 240 3% 7%;
 
-    --muted: 0 0% 20%;
-    --muted-foreground: 0 0% 60%;
+    --muted: 240 3% 15%;
+    --muted-foreground: 0 0% 70%;
 
-    --accent: 276 59% 46%;
+    --accent: 276 72% 53%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84.2% 60.2%;
+    --destructive: 0 100% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 20%;
-    --input: 0 0% 20%;
-    --ring: 205 100% 42%;
+    --border: 0 0% 25%;
+    --input: 240 3% 15%;
+    --ring: 201 100% 38%;
 
     --radius: 0rem;
 
-    --metro-blue: 205 100% 42%;
-    --metro-cyan: 189 100% 48%;
-    --metro-purple: 276 59% 46%;
-    --metro-green: 166 100% 35%;
-    --metro-orange: 30 100% 50%;
+    --metro-blue: 201 100% 38%;
+    --metro-cyan: 186 100% 50%;
+    --metro-purple: 276 72% 53%;
+    --metro-green: 142 86% 28%;
+    --metro-orange: 27 100% 55%;
+    --metro-red: 0 100% 50%;
+    --metro-yellow: 54 100% 50%;
+    --metro-lime: 75 100% 40%;
 
     --sidebar-background: 0 0% 98%;
 
@@ -86,6 +89,53 @@
 
 @layer components {
   .metro-tile {
-    @apply transition-all duration-200 hover:scale-105 hover:brightness-110;
+    @apply transition-all duration-150 hover:brightness-110 active:scale-95;
+    box-shadow: 0 0 0 0 rgba(0, 0, 0, 0);
+  }
+
+  .metro-tile:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
+
+  .live-tile {
+    overflow: hidden;
+    position: relative;
+  }
+
+  .tile-content {
+    animation: tile-flip 8s infinite;
+  }
+
+  @keyframes tile-flip {
+    0%,
+    45% {
+      transform: translateY(0);
+      opacity: 1;
+    }
+    50% {
+      transform: translateY(-100%);
+      opacity: 0;
+    }
+    55% {
+      transform: translateY(100%);
+      opacity: 0;
+    }
+    60%,
+    100% {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  .tile-sm {
+    aspect-ratio: 1;
+  }
+
+  .tile-wide {
+    aspect-ratio: 2/1;
+  }
+
+  .tile-large {
+    aspect-ratio: 1;
   }
 }

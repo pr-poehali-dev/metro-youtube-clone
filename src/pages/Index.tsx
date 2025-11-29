@@ -32,9 +32,9 @@ const mockVideos: Video[] = [
   { id: '3', title: 'React hooks подробно', channel: 'Web Dev Pro', views: '2.1М', time: '3 дня назад', thumbnail: '⚛️', color: 'bg-metro-purple' },
   { id: '4', title: 'UX дизайн паттерны', channel: 'UX Master', views: '654К', time: '5 дней назад', thumbnail: '🎯', color: 'bg-metro-green' },
   { id: '5', title: 'CSS Grid и Flexbox', channel: 'Layout School', views: '1.5М', time: '1 день назад', thumbnail: '📐', color: 'bg-metro-orange' },
-  { id: '6', title: 'JavaScript ES2024', channel: 'JS Guru', views: '987К', time: '4 дня назад', thumbnail: '🚀', color: 'bg-metro-blue' },
-  { id: '7', title: 'Анимации в вебе', channel: 'Motion Design', views: '745К', time: '6 дней назад', thumbnail: '✨', color: 'bg-metro-cyan' },
-  { id: '8', title: 'База данных SQL', channel: 'Database Pro', views: '1.8М', time: '2 дня назад', thumbnail: '🗄️', color: 'bg-metro-purple' },
+  { id: '6', title: 'JavaScript ES2024', channel: 'JS Guru', views: '987К', time: '4 дня назад', thumbnail: '🚀', color: 'bg-metro-red' },
+  { id: '7', title: 'Анимации в вебе', channel: 'Motion Design', views: '745К', time: '6 дней назад', thumbnail: '✨', color: 'bg-metro-yellow' },
+  { id: '8', title: 'База данных SQL', channel: 'Database Pro', views: '1.8М', time: '2 дня назад', thumbnail: '🗄️', color: 'bg-metro-lime' },
 ];
 
 const mockComments: Comment[] = [
@@ -70,168 +70,181 @@ const Index = () => {
   };
 
   const navItems = [
-    { id: 'home' as Section, icon: Home, label: 'Главная', color: 'bg-metro-blue' },
-    { id: 'search' as Section, icon: Search, label: 'Поиск', color: 'bg-metro-cyan' },
-    { id: 'channel' as Section, icon: User, label: 'Мой канал', color: 'bg-metro-purple' },
-    { id: 'subscriptions' as Section, icon: Video, label: 'Подписки', color: 'bg-metro-green' },
-    { id: 'history' as Section, icon: Clock, label: 'История', color: 'bg-metro-orange' },
-    { id: 'trending' as Section, icon: TrendingUp, label: 'Рекомендации', color: 'bg-metro-blue' },
-    { id: 'upload' as Section, icon: Upload, label: 'Загрузить', color: 'bg-metro-cyan' },
-    { id: 'saved' as Section, icon: Bookmark, label: 'Сохраненные', color: 'bg-metro-purple' },
+    { id: 'home' as Section, icon: Home, label: 'Главная', color: 'bg-metro-blue', size: 'normal' },
+    { id: 'search' as Section, icon: Search, label: 'Поиск', color: 'bg-metro-cyan', size: 'normal' },
+    { id: 'channel' as Section, icon: User, label: 'Мой канал', color: 'bg-metro-purple', size: 'wide' },
+    { id: 'subscriptions' as Section, icon: Video, label: 'Подписки', color: 'bg-metro-green', size: 'normal' },
+    { id: 'history' as Section, icon: Clock, label: 'История', color: 'bg-metro-orange', size: 'normal' },
+    { id: 'trending' as Section, icon: TrendingUp, label: 'Рекомендации', color: 'bg-metro-red', size: 'wide' },
+    { id: 'upload' as Section, icon: Upload, label: 'Загрузить', color: 'bg-metro-yellow', size: 'normal' },
+    { id: 'saved' as Section, icon: Bookmark, label: 'Сохраненные', color: 'bg-metro-lime', size: 'normal' },
   ];
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4 flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-primary flex items-center justify-center text-2xl">
+      <header className="bg-background/95 backdrop-blur-md border-b-2 border-primary sticky top-0 z-50">
+        <div className="container mx-auto px-6 py-3 flex items-center gap-6">
+          <button 
+            onClick={() => setCurrentSection('home')}
+            className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+          >
+            <div className="w-12 h-12 bg-primary flex items-center justify-center text-2xl">
               📺
             </div>
-            <h1 className="text-xl font-bold">MetroTube</h1>
-          </div>
-          <div className="flex-1 max-w-2xl mx-auto">
+            <div className="text-left">
+              <h1 className="text-2xl font-light tracking-wide">MetroTube</h1>
+            </div>
+          </button>
+          <div className="flex-1 max-w-xl">
             <div className="relative">
               <Input
                 type="text"
-                placeholder="Поиск видео..."
+                placeholder="Поиск"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-muted border-none h-11"
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  if (e.target.value) setCurrentSection('search');
+                }}
+                className="w-full bg-muted/50 border-2 border-border hover:border-primary focus:border-primary h-11 transition-colors"
               />
-              <Button size="sm" className="absolute right-1 top-1 bg-primary hover:bg-primary/90">
-                <Icon name="Search" size={18} />
+              <Button size="sm" className="absolute right-1 top-1 bg-primary hover:bg-primary/90 h-9">
+                <Icon name="Search" size={16} />
               </Button>
             </div>
           </div>
-          <Button variant="outline" className="border-primary text-primary hover:bg-primary hover:text-primary-foreground">
-            <Icon name="User" size={18} className="mr-2" />
-            Войти
-          </Button>
+          <div className="bg-metro-green px-4 py-2 hover:brightness-110 transition-all cursor-pointer flex items-center gap-2">
+            <Icon name="User" size={20} />
+            <span className="font-medium">Аккаунт</span>
+          </div>
         </div>
       </header>
 
-      <div className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-4 mb-8">
-          {navItems.map((item) => (
+      <div className="container mx-auto px-6 py-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 xl:grid-cols-8 gap-3 mb-8 auto-rows-fr">
+          {navItems.map((item, index) => (
             <button
               key={item.id}
               onClick={() => setCurrentSection(item.id)}
-              className={`${item.color} metro-tile aspect-square flex flex-col items-center justify-center gap-2 text-white font-medium ${
-                currentSection === item.id ? 'ring-4 ring-white scale-105' : ''
+              className={`${item.color} metro-tile live-tile ${
+                item.size === 'wide' ? 'col-span-2' : ''
+              } aspect-square flex flex-col items-center justify-center gap-3 text-white font-light text-lg relative overflow-hidden ${
+                currentSection === item.id ? 'ring-4 ring-primary/50 brightness-125' : ''
               }`}
+              style={{ animationDelay: `${index * 0.5}s` }}
             >
-              <Icon name={item.icon.name as any} size={32} />
-              <span className="text-sm">{item.label}</span>
+              <div className="tile-content w-full h-full flex flex-col items-center justify-center gap-3">
+                <Icon name={item.icon.name as any} size={item.size === 'wide' ? 40 : 36} />
+                <span className="text-base font-normal">{item.label}</span>
+              </div>
+              {currentSection === item.id && (
+                <div className="absolute bottom-0 right-0 w-3 h-3 bg-white/80 triangle-indicator" />
+              )}
             </button>
           ))}
         </div>
 
         {currentSection === 'video' && selectedVideo ? (
           <div className="space-y-6">
-            <Button
-              variant="ghost"
+            <button
               onClick={() => setCurrentSection('home')}
-              className="mb-4"
+              className="flex items-center gap-2 text-primary hover:brightness-125 transition-all mb-4 text-lg"
             >
-              <Icon name="ArrowLeft" size={18} className="mr-2" />
-              Назад
-            </Button>
+              <Icon name="ArrowLeft" size={20} />
+              <span className="font-light">Назад к списку</span>
+            </button>
 
             <div className="grid lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2 space-y-4">
-                <div className={`${selectedVideo.color} aspect-video flex items-center justify-center text-9xl`}>
+              <div className="lg:col-span-2 space-y-6">
+                <div className={`${selectedVideo.color} aspect-video flex items-center justify-center text-9xl shadow-lg`}>
                   {selectedVideo.thumbnail}
                 </div>
 
-                <div>
-                  <h2 className="text-2xl font-bold mb-2">{selectedVideo.title}</h2>
-                  <div className="flex items-center justify-between text-muted-foreground mb-4">
-                    <span>{selectedVideo.views} просмотров • {selectedVideo.time}</span>
+                <div className="space-y-4">
+                  <h2 className="text-3xl font-light">{selectedVideo.title}</h2>
+                  <div className="flex items-center justify-between text-muted-foreground">
+                    <span className="text-sm">{selectedVideo.views} просмотров • {selectedVideo.time}</span>
                   </div>
                   
-                  <div className="flex items-center gap-4 mb-6">
-                    <div className="flex items-center gap-2">
-                      <Avatar>
-                        <AvatarFallback className="bg-primary">{selectedVideo.channel[0]}</AvatarFallback>
-                      </Avatar>
+                  <div className="flex items-center gap-4 py-4 border-y border-border">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-primary flex items-center justify-center text-xl font-semibold">
+                        {selectedVideo.channel[0]}
+                      </div>
                       <div>
-                        <div className="font-semibold">{selectedVideo.channel}</div>
+                        <div className="font-semibold text-base">{selectedVideo.channel}</div>
                         <div className="text-sm text-muted-foreground">1.2М подписчиков</div>
                       </div>
                     </div>
-                    <Button className="ml-auto bg-primary hover:bg-primary/90">
+                    <button className="ml-auto bg-metro-green px-6 py-2 hover:brightness-110 transition-all font-medium">
                       Подписаться
-                    </Button>
+                    </button>
                   </div>
 
-                  <div className="bg-card p-4">
-                    <p className="text-foreground/80">
+                  <div className="bg-card/50 p-5 border-l-4 border-primary">
+                    <p className="text-foreground/90 leading-relaxed">
                       В этом видео мы подробно разбираем основы создания дизайна в стиле Metro. 
                       Вы узнаете о принципах плоского дизайна, работе с плитками и цветовыми схемами.
                     </p>
                   </div>
                 </div>
 
-                <div className="bg-card p-6 space-y-4">
-                  <h3 className="text-xl font-bold">Комментарии ({comments.length})</h3>
+                <div className="bg-card/30 p-6 space-y-6 border border-border">
+                  <h3 className="text-2xl font-light">Комментарии <span className="text-muted-foreground">({comments.length})</span></h3>
                   
                   <div className="space-y-4">
                     <div className="flex gap-3">
-                      <Avatar>
-                        <AvatarFallback className="bg-secondary">ВЫ</AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 space-y-2">
+                      <div className="w-10 h-10 bg-secondary flex items-center justify-center text-sm font-semibold flex-shrink-0">
+                        ВЫ
+                      </div>
+                      <div className="flex-1 space-y-3">
                         <Textarea
                           placeholder="Добавить комментарий..."
                           value={newComment}
                           onChange={(e) => setNewComment(e.target.value)}
-                          className="bg-muted border-none resize-none"
+                          className="bg-muted/50 border-2 border-border focus:border-primary resize-none transition-colors"
                           rows={2}
                         />
-                        <div className="flex gap-2 justify-end">
-                          <Button
-                            variant="ghost"
-                            size="sm"
+                        <div className="flex gap-3 justify-end">
+                          <button
                             onClick={() => setNewComment('')}
+                            className="px-4 py-1.5 hover:bg-muted transition-colors text-sm"
                           >
                             Отмена
-                          </Button>
-                          <Button
-                            size="sm"
+                          </button>
+                          <button
                             onClick={handleAddComment}
                             disabled={!newComment.trim()}
-                            className="bg-primary hover:bg-primary/90"
+                            className="bg-primary px-6 py-1.5 hover:brightness-110 transition-all disabled:opacity-40 disabled:cursor-not-allowed text-sm font-medium"
                           >
                             Отправить
-                          </Button>
+                          </button>
                         </div>
                       </div>
                     </div>
 
                     <div className="space-y-6 pt-4">
                       {comments.map((comment) => (
-                        <div key={comment.id} className="flex gap-3">
-                          <Avatar>
-                            <AvatarFallback className="bg-accent">{comment.avatar}</AvatarFallback>
-                          </Avatar>
+                        <div key={comment.id} className="flex gap-3 pb-4 border-b border-border/50 last:border-0">
+                          <div className="w-10 h-10 bg-accent flex items-center justify-center text-xs font-semibold flex-shrink-0">
+                            {comment.avatar}
+                          </div>
                           <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="font-semibold">{comment.author}</span>
-                              <span className="text-sm text-muted-foreground">{comment.time}</span>
+                            <div className="flex items-center gap-3 mb-2">
+                              <span className="font-semibold text-base">{comment.author}</span>
+                              <span className="text-xs text-muted-foreground">{comment.time}</span>
                             </div>
-                            <p className="text-foreground/90">{comment.text}</p>
-                            <div className="flex gap-4 mt-2">
-                              <Button variant="ghost" size="sm" className="h-8 px-2">
-                                <Icon name="ThumbsUp" size={16} className="mr-1" />
+                            <p className="text-foreground/90 leading-relaxed mb-3">{comment.text}</p>
+                            <div className="flex gap-4">
+                              <button className="flex items-center gap-2 px-3 py-1 hover:bg-muted/50 transition-colors">
+                                <Icon name="ThumbsUp" size={16} />
                                 <span className="text-xs">12</span>
-                              </Button>
-                              <Button variant="ghost" size="sm" className="h-8 px-2">
+                              </button>
+                              <button className="flex items-center gap-2 px-3 py-1 hover:bg-muted/50 transition-colors">
                                 <Icon name="ThumbsDown" size={16} />
-                              </Button>
-                              <Button variant="ghost" size="sm" className="h-8 px-2 text-xs">
+                              </button>
+                              <button className="px-3 py-1 hover:bg-muted/50 transition-colors text-xs">
                                 Ответить
-                              </Button>
+                              </button>
                             </div>
                           </div>
                         </div>
@@ -242,18 +255,18 @@ const Index = () => {
               </div>
 
               <div className="space-y-4">
-                <h3 className="font-bold text-lg">Рекомендуемые</h3>
+                <h3 className="text-xl font-light mb-4">Рекомендуемые</h3>
                 {mockVideos.slice(0, 4).map((video) => (
                   <div
                     key={video.id}
                     onClick={() => handleVideoClick(video)}
-                    className="flex gap-3 cursor-pointer hover:bg-muted/50 p-2 rounded transition-colors"
+                    className="flex gap-3 cursor-pointer hover:bg-muted/30 p-2 transition-colors border-l-2 border-transparent hover:border-primary"
                   >
-                    <div className={`${video.color} w-40 aspect-video flex items-center justify-center text-4xl flex-shrink-0`}>
+                    <div className={`${video.color} w-36 aspect-video flex items-center justify-center text-3xl flex-shrink-0 metro-tile`}>
                       {video.thumbnail}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold text-sm line-clamp-2 mb-1">{video.title}</h4>
+                    <div className="flex-1 min-w-0 flex flex-col justify-center">
+                      <h4 className="font-normal text-sm line-clamp-2 mb-1">{video.title}</h4>
                       <p className="text-xs text-muted-foreground">{video.channel}</p>
                       <p className="text-xs text-muted-foreground">{video.views} • {video.time}</p>
                     </div>
@@ -264,16 +277,16 @@ const Index = () => {
           </div>
         ) : (
           <>
-            <div className="mb-6">
-              <h2 className="text-3xl font-bold">{navItems.find(item => item.id === currentSection)?.label || 'Главная'}</h2>
+            <div className="mb-8 pb-4 border-b-2 border-primary/30">
+              <h2 className="text-4xl font-light">{navItems.find(item => item.id === currentSection)?.label || 'Главная'}</h2>
             </div>
 
             {currentSection === 'search' ? (
-              <div className="space-y-4">
-                <div className="text-muted-foreground">
-                  {searchQuery ? `Результаты поиска для "${searchQuery}"` : 'Введите запрос для поиска видео'}
+              <div className="space-y-6">
+                <div className="text-muted-foreground text-lg font-light">
+                  {searchQuery ? `Результаты поиска: "${searchQuery}"` : 'Введите запрос для поиска видео'}
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   {mockVideos
                     .filter(video => 
                       searchQuery === '' || 
@@ -286,10 +299,10 @@ const Index = () => {
                         onClick={() => handleVideoClick(video)}
                         className="cursor-pointer group"
                       >
-                        <div className={`${video.color} aspect-video metro-tile flex items-center justify-center text-6xl mb-3`}>
+                        <div className={`${video.color} aspect-video metro-tile flex items-center justify-center text-6xl mb-3 shadow-md`}>
                           {video.thumbnail}
                         </div>
-                        <h3 className="font-semibold mb-1 line-clamp-2 group-hover:text-primary transition-colors">
+                        <h3 className="font-normal mb-1 line-clamp-2 group-hover:text-primary transition-colors text-base">
                           {video.title}
                         </h3>
                         <p className="text-sm text-muted-foreground">{video.channel}</p>
@@ -299,42 +312,42 @@ const Index = () => {
                 </div>
               </div>
             ) : currentSection === 'upload' ? (
-              <div className="max-w-2xl mx-auto">
-                <div className="bg-card p-8 space-y-6">
-                  <div className="border-2 border-dashed border-border p-12 text-center space-y-4">
-                    <Icon name="Upload" size={48} className="mx-auto text-muted-foreground" />
+              <div className="max-w-3xl mx-auto">
+                <div className="bg-card/30 border-2 border-border p-8 space-y-6">
+                  <div className="border-2 border-dashed border-primary/50 p-16 text-center space-y-4 hover:border-primary transition-colors cursor-pointer bg-muted/20">
+                    <Icon name="Upload" size={64} className="mx-auto text-primary" />
                     <div>
-                      <h3 className="font-semibold mb-2">Загрузите видео</h3>
+                      <h3 className="text-xl font-light mb-2">Загрузите видео</h3>
                       <p className="text-sm text-muted-foreground">Перетащите файл или нажмите для выбора</p>
                     </div>
-                    <Button className="bg-primary hover:bg-primary/90">
+                    <button className="bg-primary px-8 py-3 hover:brightness-110 transition-all font-medium">
                       Выбрать файл
-                    </Button>
+                    </button>
                   </div>
-                  <div className="space-y-4">
+                  <div className="space-y-5">
                     <div>
-                      <label className="block text-sm font-medium mb-2">Название</label>
-                      <Input placeholder="Введите название видео" className="bg-muted border-none" />
+                      <label className="block text-sm font-medium mb-2 text-muted-foreground uppercase tracking-wide">Название</label>
+                      <Input placeholder="Введите название видео" className="bg-muted/50 border-2 border-border focus:border-primary h-12" />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-2">Описание</label>
-                      <Textarea placeholder="Расскажите о вашем видео" className="bg-muted border-none" rows={4} />
+                      <label className="block text-sm font-medium mb-2 text-muted-foreground uppercase tracking-wide">Описание</label>
+                      <Textarea placeholder="Расскажите о вашем видео" className="bg-muted/50 border-2 border-border focus:border-primary" rows={5} />
                     </div>
                   </div>
                 </div>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {mockVideos.map((video) => (
                   <div
                     key={video.id}
                     onClick={() => handleVideoClick(video)}
                     className="cursor-pointer group"
                   >
-                    <div className={`${video.color} aspect-video metro-tile flex items-center justify-center text-6xl mb-3`}>
+                    <div className={`${video.color} aspect-video metro-tile flex items-center justify-center text-6xl mb-3 shadow-md`}>
                       {video.thumbnail}
                     </div>
-                    <h3 className="font-semibold mb-1 line-clamp-2 group-hover:text-primary transition-colors">
+                    <h3 className="font-normal mb-1 line-clamp-2 group-hover:text-primary transition-colors text-base">
                       {video.title}
                     </h3>
                     <p className="text-sm text-muted-foreground">{video.channel}</p>

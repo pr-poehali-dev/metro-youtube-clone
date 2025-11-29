@@ -117,7 +117,10 @@ export default {
 					cyan: 'hsl(var(--metro-cyan))',
 					purple: 'hsl(var(--metro-purple))',
 					green: 'hsl(var(--metro-green))',
-					orange: 'hsl(var(--metro-orange))'
+					orange: 'hsl(var(--metro-orange))',
+					red: 'hsl(var(--metro-red))',
+					yellow: 'hsl(var(--metro-yellow))',
+					lime: 'hsl(var(--metro-lime))'
 				}
 			},
 			keyframes: {
