@@ -1,12 +1,15 @@
-import { useState } from 'react';
-import { Home, Search, User, Clock, TrendingUp, Upload, Bookmark, Video, Music, Play, ThumbsUp, ThumbsDown, MessageSquare, Headphones, History } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Home, Search, User, Clock, TrendingUp, Upload, Bookmark, Video, Music, Play, ThumbsUp, ThumbsDown, MessageSquare, Headphones, History, Pause, Volume2, Settings, Maximize, SkipForward, SkipBack, Moon, Sun, Monitor, Smartphone, Mic, LogIn, UserPlus, LogOut } from 'lucide-react';
 import Icon from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Textarea } from '@/components/ui/textarea';
 
-type Section = 'home' | 'search' | 'channel' | 'subscriptions' | 'history' | 'trending' | 'upload' | 'saved' | 'video' | 'music';
+type Section = 'home' | 'search' | 'channel' | 'subscriptions' | 'history' | 'trending' | 'upload' | 'saved' | 'video' | 'music' | 'podcasts' | 'login' | 'register';
+type Theme = 'dark' | 'light';
+type ViewMode = 'desktop' | 'mobile';
+type VideoQuality = '360p' | '720p' | '1080p';
 
 interface Video {
   id: string;
@@ -35,6 +38,14 @@ interface Comment {
   text: string;
   time: string;
   avatar: string;
+  likes: number;
+}
+
+interface User {
+  username: string;
+  email: string;
+  avatar: string;
+  channelDescription: string;
 }
 
 const mockVideos: Video[] = [
@@ -65,9 +76,15 @@ const trendingYoutubers = ['MrBeast', 'PewDiePie', 'Dude Perfect'];
 const searchSuggestions = ['Уроки React', 'Музыка 2024', 'JavaScript'];
 
 const mockComments: Comment[] = [
-  { id: '1', author: 'Алексей М.', text: 'Отличное видео! Очень помогло разобраться с темой', time: '2 часа назад', avatar: 'AM' },
-  { id: '2', author: 'Мария К.', text: 'Спасибо за подробное объяснение. Жду продолжения серии', time: '5 часов назад', avatar: 'МК' },
-  { id: '3', author: 'Дмитрий П.', text: 'Можно больше примеров кода? Хочется попрактиковаться', time: '1 день назад', avatar: 'ДП' },
+  { id: '1', author: 'Алексей М.', text: 'Отличное видео! Очень помогло разобраться с темой', time: '2 часа назад', avatar: 'AM', likes: 12 },
+  { id: '2', author: 'Мария К.', text: 'Спасибо за подробное объяснение. Жду продолжения серии', time: '5 часов назад', avatar: 'МК', likes: 8 },
+  { id: '3', author: 'Дмитрий П.', text: 'Можно больше примеров кода? Хочется попрактиковаться', time: '1 день назад', avatar: 'ДП', likes: 5 },
+];
+
+const mockPodcasts = [
+  { id: '1', name: 'Tech Talk', avatar: 'TT', color: 'bg-metro-purple', episodes: '124' },
+  { id: '2', name: 'Business Pod', avatar: 'BP', color: 'bg-metro-orange', episodes: '89' },
+  { id: '3', name: 'Science Hour', avatar: 'SH', color: 'bg-metro-cyan', episodes: '156' },
 ];
 
 const Index = () => {
@@ -79,6 +96,25 @@ const Index = () => {
   const [isDisliked, setIsDisliked] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [theme, setTheme] = useState<Theme>('dark');
+  const [viewMode, setViewMode] = useState<ViewMode>('desktop');
+  const [videoProgress, setVideoProgress] = useState(0);
+  const [volume, setVolume] = useState(80);
+  const [quality, setQuality] = useState<VideoQuality>('1080p');
+  const [showQualityMenu, setShowQualityMenu] = useState(false);
+  const [likesCount, setLikesCount] = useState(45000);
+  const [dislikesCount, setDislikesCount] = useState(234);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [loginForm, setLoginForm] = useState({ username: '', password: '' });
+  const [registerForm, setRegisterForm] = useState({ username: '', email: '', password: '' });
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadForm, setUploadForm] = useState({ title: '', description: '' });
+  const [sectionTransition, setSectionTransition] = useState(false);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('light', theme === 'light');
+  }, [theme]);
 
   const handleVideoClick = (video: Video) => {
     setSelectedVideo(video);
@@ -86,16 +122,110 @@ const Index = () => {
   };
 
   const handleAddComment = () => {
-    if (newComment.trim()) {
+    if (newComment.trim() && isLoggedIn) {
       const comment: Comment = {
         id: Date.now().toString(),
-        author: 'Вы',
+        author: currentUser?.username || 'Вы',
         text: newComment,
         time: 'только что',
-        avatar: 'ВЫ',
+        avatar: currentUser?.avatar || 'ВЫ',
+        likes: 0,
       };
       setComments([comment, ...comments]);
       setNewComment('');
+    }
+  };
+
+  const handleLike = () => {
+    if (!isLoggedIn) return;
+    if (isLiked) {
+      setLikesCount(likesCount - 1);
+      setIsLiked(false);
+    } else {
+      setLikesCount(likesCount + 1);
+      setIsLiked(true);
+      if (isDisliked) {
+        setDislikesCount(dislikesCount - 1);
+        setIsDisliked(false);
+      }
+    }
+  };
+
+  const handleDislike = () => {
+    if (!isLoggedIn) return;
+    if (isDisliked) {
+      setDislikesCount(dislikesCount - 1);
+      setIsDisliked(false);
+    } else {
+      setDislikesCount(dislikesCount + 1);
+      setIsDisliked(true);
+      if (isLiked) {
+        setLikesCount(likesCount - 1);
+        setIsLiked(false);
+      }
+    }
+  };
+
+  const handleLogin = () => {
+    if (loginForm.username && loginForm.password) {
+      setCurrentUser({
+        username: loginForm.username,
+        email: loginForm.username + '@metrotube.com',
+        avatar: loginForm.username.substring(0, 2).toUpperCase(),
+        channelDescription: 'Добро пожаловать на мой канал!',
+      });
+      setIsLoggedIn(true);
+      setCurrentSection('home');
+    }
+  };
+
+  const handleRegister = () => {
+    if (registerForm.username && registerForm.email && registerForm.password) {
+      setCurrentUser({
+        username: registerForm.username,
+        email: registerForm.email,
+        avatar: registerForm.username.substring(0, 2).toUpperCase(),
+        channelDescription: 'Добро пожаловать на мой канал!',
+      });
+      setIsLoggedIn(true);
+      setCurrentSection('home');
+    }
+  };
+
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    setCurrentUser(null);
+    setCurrentSection('home');
+  };
+
+  const handleSectionChange = (section: Section) => {
+    setSectionTransition(true);
+    setTimeout(() => {
+      setCurrentSection(section);
+      setSectionTransition(false);
+    }, 150);
+  };
+
+  const handleSkipForward = () => {
+    setVideoProgress(Math.min(videoProgress + 10, 100));
+  };
+
+  const handleSkipBack = () => {
+    setVideoProgress(Math.max(videoProgress - 10, 0));
+  };
+
+  const handleCommentLike = (commentId: string) => {
+    if (!isLoggedIn) return;
+    setComments(comments.map(c => 
+      c.id === commentId ? { ...c, likes: c.likes + 1 } : c
+    ));
+  };
+
+  const handleUploadVideo = () => {
+    if (uploadFile && uploadForm.title && isLoggedIn) {
+      alert(`Видео "${uploadForm.title}" успешно загружено!`);
+      setUploadFile(null);
+      setUploadForm({ title: '', description: '' });
     }
   };
 
@@ -172,10 +302,115 @@ const Index = () => {
       primaryContent: null,
       altContent: <div className="text-xs mt-1 opacity-90">{mockVideos.length} видео</div>
     },
+    { 
+      id: 'podcasts' as Section, 
+      icon: Mic, 
+      label: 'Подкасты', 
+      color: 'bg-metro-purple', 
+      size: 'normal',
+      primaryContent: null,
+      altContent: <div className="text-xs mt-1 opacity-90 text-center leading-tight">{mockPodcasts.map(p => p.name.split(' ')[0]).join(', ')}</div>
+    },
   ];
 
+  if (currentSection === 'login') {
+    return (
+      <div className={`min-h-screen bg-background text-foreground flex items-center justify-center transition-opacity duration-300 ${sectionTransition ? 'opacity-0' : 'opacity-100'}`}>
+        <div className="w-full max-w-md p-8 space-y-6">
+          <div className="text-center space-y-2">
+            <div className="w-20 h-20 bg-primary mx-auto flex items-center justify-center text-4xl">📺</div>
+            <h1 className="text-4xl font-light">MetroTube</h1>
+            <p className="text-muted-foreground">Вход в аккаунт</p>
+          </div>
+          <div className="bg-card/30 border-2 border-border p-6 space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Логин</label>
+              <Input 
+                value={loginForm.username}
+                onChange={(e) => setLoginForm({...loginForm, username: e.target.value})}
+                placeholder="Введите логин"
+                className="bg-muted/50 border-2 border-border focus:border-primary h-12"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Пароль</label>
+              <Input 
+                type="password"
+                value={loginForm.password}
+                onChange={(e) => setLoginForm({...loginForm, password: e.target.value})}
+                placeholder="Введите пароль"
+                className="bg-muted/50 border-2 border-border focus:border-primary h-12"
+              />
+            </div>
+            <Button onClick={handleLogin} className="w-full h-12 text-base bg-primary hover:bg-primary/90">
+              Войти
+            </Button>
+            <div className="text-center text-sm">
+              <button onClick={() => handleSectionChange('register')} className="text-primary hover:brightness-110">
+                Создать аккаунт
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (currentSection === 'register') {
+    return (
+      <div className={`min-h-screen bg-background text-foreground flex items-center justify-center transition-opacity duration-300 ${sectionTransition ? 'opacity-0' : 'opacity-100'}`}>
+        <div className="w-full max-w-md p-8 space-y-6">
+          <div className="text-center space-y-2">
+            <div className="w-20 h-20 bg-primary mx-auto flex items-center justify-center text-4xl">📺</div>
+            <h1 className="text-4xl font-light">MetroTube</h1>
+            <p className="text-muted-foreground">Регистрация</p>
+          </div>
+          <div className="bg-card/30 border-2 border-border p-6 space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Логин</label>
+              <Input 
+                value={registerForm.username}
+                onChange={(e) => setRegisterForm({...registerForm, username: e.target.value})}
+                placeholder="Выберите логин"
+                className="bg-muted/50 border-2 border-border focus:border-primary h-12"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Email</label>
+              <Input 
+                type="email"
+                value={registerForm.email}
+                onChange={(e) => setRegisterForm({...registerForm, email: e.target.value})}
+                placeholder="Введите email"
+                className="bg-muted/50 border-2 border-border focus:border-primary h-12"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Пароль</label>
+              <Input 
+                type="password"
+                value={registerForm.password}
+                onChange={(e) => setRegisterForm({...registerForm, password: e.target.value})}
+                placeholder="Придумайте пароль"
+                className="bg-muted/50 border-2 border-border focus:border-primary h-12"
+              />
+            </div>
+            <Button onClick={handleRegister} className="w-full h-12 text-base bg-primary hover:bg-primary/90">
+              Зарегистрироваться
+            </Button>
+            <div className="text-center text-sm">
+              <button onClick={() => handleSectionChange('login')} className="text-primary hover:brightness-110">
+                Уже есть аккаунт? Войти
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className={`min-h-screen bg-background text-foreground transition-all duration-300 ${viewMode === 'mobile' ? 'max-w-md mx-auto' : ''} ${sectionTransition ? 'opacity-0' : 'opacity-100'}`} style={{ backgroundImage: theme === 'dark' ? 'radial-gradient(circle at 20% 50%, rgba(32, 145, 196, 0.05) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(146, 64, 179, 0.05) 0%, transparent 50%)' : 'radial-gradient(circle at 20% 50%, rgba(32, 145, 196, 0.03) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(146, 64, 179, 0.03) 0%, transparent 50%)' }}>
       <header className="bg-background/95 backdrop-blur-md border-b-2 border-primary sticky top-0 z-50">
         <div className="container mx-auto px-6 py-3 flex items-center gap-6">
           <button 
@@ -206,9 +441,31 @@ const Index = () => {
               </Button>
             </div>
           </div>
-          <div className="bg-metro-green px-4 py-2 hover:brightness-110 transition-all cursor-pointer flex items-center gap-2">
-            <Icon name="User" size={20} />
-            <span className="font-medium">Аккаунт</span>
+          <div className="flex items-center gap-3">
+            <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className="bg-muted/50 px-3 py-2 hover:brightness-110 transition-all">
+              <Icon name={theme === 'dark' ? 'Sun' : 'Moon'} size={20} />
+            </button>
+            <button onClick={() => setViewMode(viewMode === 'desktop' ? 'mobile' : 'desktop')} className="bg-muted/50 px-3 py-2 hover:brightness-110 transition-all">
+              <Icon name={viewMode === 'desktop' ? 'Smartphone' : 'Monitor'} size={20} />
+            </button>
+            {isLoggedIn ? (
+              <div className="flex items-center gap-2">
+                <div className="bg-metro-green px-4 py-2 flex items-center gap-2">
+                  <div className="w-8 h-8 bg-white/20 flex items-center justify-center text-xs font-semibold">
+                    {currentUser?.avatar}
+                  </div>
+                  <span className="font-medium">{currentUser?.username}</span>
+                </div>
+                <button onClick={handleLogout} className="bg-destructive px-3 py-2 hover:brightness-110 transition-all">
+                  <Icon name="LogOut" size={20} />
+                </button>
+              </div>
+            ) : (
+              <button onClick={() => handleSectionChange('login')} className="bg-metro-green px-4 py-2 hover:brightness-110 transition-all flex items-center gap-2">
+                <Icon name="LogIn" size={20} />
+                <span className="font-medium">Войти</span>
+              </button>
+            )}
           </div>
         </div>
       </header>
@@ -218,13 +475,13 @@ const Index = () => {
           {navItems.map((item, index) => (
             <button
               key={item.id}
-              onClick={() => setCurrentSection(item.id)}
+              onClick={() => handleSectionChange(item.id)}
               className={`${item.color} metro-tile live-tile ${
                 item.size === 'wide' ? 'col-span-2' : item.size === 'logo' ? 'col-span-2 row-span-2' : ''
               } aspect-square flex flex-col items-center justify-center gap-2 text-white font-light text-lg relative overflow-hidden ${
                 currentSection === item.id ? 'ring-4 ring-primary/50 brightness-125' : ''
               }`}
-              style={{ animationDelay: `${index * 0.5}s` }}
+              style={{ animationDelay: `${index * 1.2}s` }}
             >
               {item.size === 'logo' ? (
                 <>
@@ -260,7 +517,7 @@ const Index = () => {
         {currentSection === 'video' && selectedVideo ? (
           <div className="space-y-6">
             <button
-              onClick={() => setCurrentSection('home')}
+              onClick={() => handleSectionChange('home')}
               className="flex items-center gap-2 text-primary hover:brightness-125 transition-all mb-4 text-lg"
             >
               <Icon name="ArrowLeft" size={20} />
@@ -269,12 +526,15 @@ const Index = () => {
 
             <div className="grid lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2 space-y-6">
-                <div className="relative group">
-                  <div className={`${selectedVideo.color} aspect-video flex items-center justify-center text-9xl shadow-lg cursor-pointer`}
+                <div className="relative group bg-black">
+                  <div className={`${selectedVideo.color} aspect-video flex items-center justify-center text-9xl shadow-lg cursor-pointer relative`}
                     onClick={() => setIsPlaying(!isPlaying)}
                   >
                     {isPlaying ? (
-                      <Icon name="Pause" size={64} className="text-white/80" />
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        {selectedVideo.thumbnail}
+                        <div className="absolute inset-0 bg-black/40" />
+                      </div>
                     ) : (
                       <>
                         {selectedVideo.thumbnail}
@@ -286,6 +546,67 @@ const Index = () => {
                       </>
                     )}
                   </div>
+                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="space-y-3">
+                      <div className="relative h-1 bg-white/30 cursor-pointer" onClick={(e) => {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        const percent = ((e.clientX - rect.left) / rect.width) * 100;
+                        setVideoProgress(percent);
+                      }}>
+                        <div className="absolute h-full bg-primary transition-all" style={{ width: `${videoProgress}%` }} />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <button onClick={() => setIsPlaying(!isPlaying)} className="hover:scale-110 transition-transform">
+                            <Icon name={isPlaying ? 'Pause' : 'Play'} size={24} className="text-white" />
+                          </button>
+                          <button onClick={handleSkipBack} className="hover:scale-110 transition-transform">
+                            <Icon name="SkipBack" size={20} className="text-white" />
+                          </button>
+                          <button onClick={handleSkipForward} className="hover:scale-110 transition-transform">
+                            <Icon name="SkipForward" size={20} className="text-white" />
+                          </button>
+                          <div className="flex items-center gap-2">
+                            <Icon name="Volume2" size={20} className="text-white" />
+                            <input 
+                              type="range" 
+                              min="0" 
+                              max="100" 
+                              value={volume} 
+                              onChange={(e) => setVolume(Number(e.target.value))}
+                              className="w-20 h-1 accent-primary"
+                            />
+                            <span className="text-white text-xs w-8">{volume}%</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-white text-sm">{Math.floor(videoProgress / 100 * 10)}:{Math.floor((videoProgress / 100 * 600) % 60).toString().padStart(2, '0')} / 10:00</span>
+                          <div className="relative">
+                            <button onClick={() => setShowQualityMenu(!showQualityMenu)} className="hover:scale-110 transition-transform">
+                              <Icon name="Settings" size={20} className="text-white" />
+                            </button>
+                            {showQualityMenu && (
+                              <div className="absolute bottom-full right-0 mb-2 bg-black/90 border border-white/20 p-2 space-y-1">
+                                <div className="text-white text-xs mb-2 px-2">Качество</div>
+                                {(['360p', '720p', '1080p'] as VideoQuality[]).map(q => (
+                                  <button
+                                    key={q}
+                                    onClick={() => { setQuality(q); setShowQualityMenu(false); }}
+                                    className={`w-full px-4 py-1 text-sm text-left ${quality === q ? 'bg-primary text-white' : 'text-white/80 hover:bg-white/10'}`}
+                                  >
+                                    {q}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          <button className="hover:scale-110 transition-transform">
+                            <Icon name="Maximize" size={20} className="text-white" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="space-y-4">
@@ -295,22 +616,26 @@ const Index = () => {
                     <span className="text-sm text-muted-foreground">{selectedVideo.views} просмотров • {selectedVideo.time}</span>
                     <div className="flex items-center gap-3">
                       <button 
-                        onClick={() => { setIsLiked(!isLiked); setIsDisliked(false); }}
+                        onClick={handleLike}
+                        disabled={!isLoggedIn}
                         className={`flex items-center gap-2 px-4 py-2 ${
                           isLiked ? 'bg-primary' : 'bg-muted/50'
-                        } hover:brightness-110 transition-all`}
+                        } hover:brightness-110 transition-all disabled:opacity-50 disabled:cursor-not-allowed`}
+                        title={!isLoggedIn ? 'Войдите, чтобы оценить' : ''}
                       >
                         <Icon name="ThumbsUp" size={18} />
-                        <span className="text-sm font-medium">{selectedVideo.likes}</span>
+                        <span className="text-sm font-medium">{likesCount.toLocaleString()}</span>
                       </button>
                       <button 
-                        onClick={() => { setIsDisliked(!isDisliked); setIsLiked(false); }}
+                        onClick={handleDislike}
+                        disabled={!isLoggedIn}
                         className={`flex items-center gap-2 px-4 py-2 ${
                           isDisliked ? 'bg-destructive' : 'bg-muted/50'
-                        } hover:brightness-110 transition-all`}
+                        } hover:brightness-110 transition-all disabled:opacity-50 disabled:cursor-not-allowed`}
+                        title={!isLoggedIn ? 'Войдите, чтобы оценить' : ''}
                       >
                         <Icon name="ThumbsDown" size={18} />
-                        <span className="text-sm font-medium">{selectedVideo.dislikes}</span>
+                        <span className="text-sm font-medium">{dislikesCount.toLocaleString()}</span>
                       </button>
                       <div className="flex items-center gap-2 px-4 py-2 bg-muted/50">
                         <Icon name="MessageSquare" size={18} />
@@ -346,35 +671,44 @@ const Index = () => {
                   <h3 className="text-2xl font-light">Комментарии <span className="text-muted-foreground">({comments.length})</span></h3>
                   
                   <div className="space-y-4">
-                    <div className="flex gap-3">
-                      <div className="w-10 h-10 bg-secondary flex items-center justify-center text-sm font-semibold flex-shrink-0">
-                        ВЫ
-                      </div>
-                      <div className="flex-1 space-y-3">
-                        <Textarea
-                          placeholder="Добавить комментарий..."
-                          value={newComment}
-                          onChange={(e) => setNewComment(e.target.value)}
-                          className="bg-muted/50 border-2 border-border focus:border-primary resize-none transition-colors"
-                          rows={2}
-                        />
-                        <div className="flex gap-3 justify-end">
-                          <button
-                            onClick={() => setNewComment('')}
-                            className="px-4 py-1.5 hover:bg-muted transition-colors text-sm"
-                          >
-                            Отмена
-                          </button>
-                          <button
-                            onClick={handleAddComment}
-                            disabled={!newComment.trim()}
-                            className="bg-primary px-6 py-1.5 hover:brightness-110 transition-all disabled:opacity-40 disabled:cursor-not-allowed text-sm font-medium"
-                          >
-                            Отправить
-                          </button>
+                    {isLoggedIn ? (
+                      <div className="flex gap-3">
+                        <div className="w-10 h-10 bg-secondary flex items-center justify-center text-sm font-semibold flex-shrink-0">
+                          {currentUser?.avatar}
+                        </div>
+                        <div className="flex-1 space-y-3">
+                          <Textarea
+                            placeholder="Добавить комментарий..."
+                            value={newComment}
+                            onChange={(e) => setNewComment(e.target.value)}
+                            className="bg-muted/50 border-2 border-border focus:border-primary resize-none transition-colors"
+                            rows={2}
+                          />
+                          <div className="flex gap-3 justify-end">
+                            <button
+                              onClick={() => setNewComment('')}
+                              className="px-4 py-1.5 hover:bg-muted transition-colors text-sm"
+                            >
+                              Отмена
+                            </button>
+                            <button
+                              onClick={handleAddComment}
+                              disabled={!newComment.trim()}
+                              className="bg-primary px-6 py-1.5 hover:brightness-110 transition-all disabled:opacity-40 disabled:cursor-not-allowed text-sm font-medium"
+                            >
+                              Отправить
+                            </button>
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    ) : (
+                      <div className="bg-muted/30 p-4 text-center border border-border">
+                        <p className="text-muted-foreground mb-3">Войдите, чтобы оставить комментарий</p>
+                        <button onClick={() => handleSectionChange('login')} className="bg-primary px-6 py-2 hover:brightness-110 transition-all">
+                          Войти
+                        </button>
+                      </div>
+                    )}
 
                     <div className="space-y-6 pt-4">
                       {comments.map((comment) => (
@@ -389,14 +723,24 @@ const Index = () => {
                             </div>
                             <p className="text-foreground/90 leading-relaxed mb-3">{comment.text}</p>
                             <div className="flex gap-4">
-                              <button className="flex items-center gap-2 px-3 py-1 hover:bg-muted/50 transition-colors">
+                              <button 
+                                onClick={() => handleCommentLike(comment.id)}
+                                disabled={!isLoggedIn}
+                                className="flex items-center gap-2 px-3 py-1 hover:bg-muted/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
                                 <Icon name="ThumbsUp" size={16} />
-                                <span className="text-xs">12</span>
+                                <span className="text-xs">{comment.likes}</span>
                               </button>
-                              <button className="flex items-center gap-2 px-3 py-1 hover:bg-muted/50 transition-colors">
+                              <button 
+                                disabled={!isLoggedIn}
+                                className="flex items-center gap-2 px-3 py-1 hover:bg-muted/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
                                 <Icon name="ThumbsDown" size={16} />
                               </button>
-                              <button className="px-3 py-1 hover:bg-muted/50 transition-colors text-xs">
+                              <button 
+                                disabled={!isLoggedIn}
+                                className="px-3 py-1 hover:bg-muted/50 transition-colors text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
                                 Ответить
                               </button>
                             </div>
@@ -443,7 +787,47 @@ const Index = () => {
               <h2 className="text-4xl font-light">{navItems.find(item => item.id === currentSection)?.label || 'Главная'}</h2>
             </div>
 
-            {currentSection === 'channel' ? (
+            {currentSection === 'podcasts' ? (
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {mockPodcasts.map((podcast) => (
+                    <div
+                      key={podcast.id}
+                      className={`${podcast.color} metro-tile aspect-square flex flex-col items-center justify-center gap-4 p-6 cursor-pointer`}
+                    >
+                      <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center">
+                        <Icon name="Mic" size={32} className="text-white" />
+                      </div>
+                      <div className="text-center text-white">
+                        <h3 className="font-semibold text-lg">{podcast.name}</h3>
+                        <p className="text-sm opacity-80">{podcast.episodes} эпизодов</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div>
+                  <h3 className="text-2xl font-light mb-4">Последние выпуски</h3>
+                  <div className="space-y-3">
+                    {mockVideos.slice(0, 5).map((video) => (
+                      <div
+                        key={video.id}
+                        onClick={() => handleVideoClick(video)}
+                        className="flex gap-4 cursor-pointer hover:bg-muted/30 p-3 transition-colors border-l-2 border-transparent hover:border-primary"
+                      >
+                        <div className={`${video.color} w-24 aspect-square flex items-center justify-center flex-shrink-0`}>
+                          <Icon name="Mic" size={32} className="text-white" />
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-normal mb-1">{video.title}</h4>
+                          <p className="text-sm text-muted-foreground">{video.channel} • {video.views} • {video.time}</p>
+                          <p className="text-xs text-muted-foreground mt-1">Эпизод {Math.floor(Math.random() * 100) + 1}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : currentSection === 'channel' ? (
               <div className="space-y-6">
                 <div className="bg-metro-purple p-8 flex items-center gap-6">
                   <div className="w-32 h-32 bg-white/20 flex items-center justify-center text-5xl font-bold">
@@ -686,28 +1070,64 @@ const Index = () => {
               </div>
             ) : currentSection === 'upload' ? (
               <div className="max-w-3xl mx-auto">
-                <div className="bg-card/30 border-2 border-border p-8 space-y-6">
-                  <div className="border-2 border-dashed border-primary/50 p-16 text-center space-y-4 hover:border-primary transition-colors cursor-pointer bg-muted/20">
-                    <Icon name="Upload" size={64} className="mx-auto text-primary" />
-                    <div>
-                      <h3 className="text-xl font-light mb-2">Загрузите видео</h3>
-                      <p className="text-sm text-muted-foreground">Перетащите файл или нажмите для выбора</p>
-                    </div>
-                    <button className="bg-primary px-8 py-3 hover:brightness-110 transition-all font-medium">
-                      Выбрать файл
+                {!isLoggedIn ? (
+                  <div className="bg-card/30 border-2 border-border p-12 text-center space-y-4">
+                    <Icon name="Upload" size={64} className="mx-auto text-muted-foreground" />
+                    <h3 className="text-2xl font-light">Войдите, чтобы загружать видео</h3>
+                    <button onClick={() => handleSectionChange('login')} className="bg-primary px-8 py-3 hover:brightness-110 transition-all font-medium">
+                      Войти
                     </button>
                   </div>
-                  <div className="space-y-5">
-                    <div>
-                      <label className="block text-sm font-medium mb-2 text-muted-foreground uppercase tracking-wide">Название</label>
-                      <Input placeholder="Введите название видео" className="bg-muted/50 border-2 border-border focus:border-primary h-12" />
+                ) : (
+                  <div className="bg-card/30 border-2 border-border p-8 space-y-6">
+                    <div className="border-2 border-dashed border-primary/50 p-16 text-center space-y-4 hover:border-primary transition-colors cursor-pointer bg-muted/20">
+                      <Icon name="Upload" size={64} className="mx-auto text-primary" />
+                      <div>
+                        <h3 className="text-xl font-light mb-2">Загрузите видео</h3>
+                        <p className="text-sm text-muted-foreground">Перетащите файл или нажмите для выбора</p>
+                        {uploadFile && <p className="text-sm text-primary mt-2">Выбран: {uploadFile.name}</p>}
+                      </div>
+                      <input 
+                        type="file" 
+                        accept="video/*"
+                        onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
+                        className="hidden"
+                        id="video-upload"
+                      />
+                      <label htmlFor="video-upload" className="bg-primary px-8 py-3 hover:brightness-110 transition-all font-medium inline-block cursor-pointer">
+                        Выбрать файл
+                      </label>
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-2 text-muted-foreground uppercase tracking-wide">Описание</label>
-                      <Textarea placeholder="Расскажите о вашем видео" className="bg-muted/50 border-2 border-border focus:border-primary" rows={5} />
+                    <div className="space-y-5">
+                      <div>
+                        <label className="block text-sm font-medium mb-2 text-muted-foreground uppercase tracking-wide">Название</label>
+                        <Input 
+                          value={uploadForm.title}
+                          onChange={(e) => setUploadForm({...uploadForm, title: e.target.value})}
+                          placeholder="Введите название видео" 
+                          className="bg-muted/50 border-2 border-border focus:border-primary h-12" 
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-2 text-muted-foreground uppercase tracking-wide">Описание</label>
+                        <Textarea 
+                          value={uploadForm.description}
+                          onChange={(e) => setUploadForm({...uploadForm, description: e.target.value})}
+                          placeholder="Расскажите о вашем видео" 
+                          className="bg-muted/50 border-2 border-border focus:border-primary" 
+                          rows={5} 
+                        />
+                      </div>
+                      <Button 
+                        onClick={handleUploadVideo}
+                        disabled={!uploadFile || !uploadForm.title}
+                        className="w-full h-12 text-base bg-primary hover:bg-primary/90 disabled:opacity-50"
+                      >
+                        Опубликовать видео
+                      </Button>
                     </div>
                   </div>
-                </div>
+                )}
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
