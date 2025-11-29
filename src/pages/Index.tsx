@@ -28,24 +28,34 @@ interface Channel {
   id: string;
   name: string;
   avatar: string;
-  subscribers: string;
+  subscribers: number;
   color: string;
 }
 
 interface Comment {
   id: string;
   author: string;
+  authorId: string;
   text: string;
   time: string;
   avatar: string;
   likes: number;
+  imageUrl?: string;
+  linkUrl?: string;
+  linkText?: string;
+  replies?: Comment[];
+  parentId?: string;
 }
 
 interface User {
+  id: string;
   username: string;
   email: string;
   avatar: string;
   channelDescription: string;
+  channelBanner?: string;
+  subscribers: number;
+  subscribedTo: string[];
 }
 
 const mockVideos: Video[] = [
@@ -60,10 +70,10 @@ const mockVideos: Video[] = [
 ];
 
 const mockChannels: Channel[] = [
-  { id: '1', name: 'Design Channel', avatar: 'DC', subscribers: '2.5М', color: 'bg-metro-blue' },
-  { id: '2', name: 'Code Academy', avatar: 'CA', subscribers: '1.8М', color: 'bg-metro-cyan' },
-  { id: '3', name: 'Web Dev Pro', avatar: 'WD', subscribers: '3.2М', color: 'bg-metro-purple' },
-  { id: '4', name: 'UX Master', avatar: 'UX', subscribers: '987К', color: 'bg-metro-green' },
+  { id: '1', name: 'Design Channel', avatar: 'DC', subscribers: 2500000, color: 'bg-metro-blue' },
+  { id: '2', name: 'Code Academy', avatar: 'CA', subscribers: 1800000, color: 'bg-metro-cyan' },
+  { id: '3', name: 'Web Dev Pro', avatar: 'WD', subscribers: 3200000, color: 'bg-metro-purple' },
+  { id: '4', name: 'UX Master', avatar: 'UX', subscribers: 987000, color: 'bg-metro-green' },
 ];
 
 const mockMusic = [
@@ -76,9 +86,9 @@ const trendingYoutubers = ['MrBeast', 'PewDiePie', 'Dude Perfect'];
 const searchSuggestions = ['Уроки React', 'Музыка 2024', 'JavaScript'];
 
 const mockComments: Comment[] = [
-  { id: '1', author: 'Алексей М.', text: 'Отличное видео! Очень помогло разобраться с темой', time: '2 часа назад', avatar: 'AM', likes: 12 },
-  { id: '2', author: 'Мария К.', text: 'Спасибо за подробное объяснение. Жду продолжения серии', time: '5 часов назад', avatar: 'МК', likes: 8 },
-  { id: '3', author: 'Дмитрий П.', text: 'Можно больше примеров кода? Хочется попрактиковаться', time: '1 день назад', avatar: 'ДП', likes: 5 },
+  { id: '1', author: 'Алексей М.', authorId: 'user1', text: 'Отличное видео! Очень помогло разобраться с темой', time: '2 часа назад', avatar: 'AM', likes: 12, replies: [] },
+  { id: '2', author: 'Мария К.', authorId: 'user2', text: 'Спасибо за подробное объяснение. Жду продолжения серии', time: '5 часов назад', avatar: 'МК', likes: 8, replies: [] },
+  { id: '3', author: 'Дмитрий П.', authorId: 'user3', text: 'Можно больше примеров кода? Хочется попрактиковаться', time: '1 день назад', avatar: 'ДП', likes: 5, replies: [] },
 ];
 
 const mockPodcasts = [
@@ -110,7 +120,16 @@ const Index = () => {
   const [registerForm, setRegisterForm] = useState({ username: '', email: '', password: '' });
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadForm, setUploadForm] = useState({ title: '', description: '' });
+  const [uploadThumbnail, setUploadThumbnail] = useState<File | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
   const [sectionTransition, setSectionTransition] = useState(false);
+  const [isEditingChannel, setIsEditingChannel] = useState(false);
+  const [channelEditForm, setChannelEditForm] = useState({ description: '', banner: null as File | null });
+  const [commentImage, setCommentImage] = useState<File | null>(null);
+  const [commentLink, setCommentLink] = useState({ url: '', text: '' });
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [myVideos, setMyVideos] = useState<Video[]>([]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('light', theme === 'light');
@@ -122,17 +141,37 @@ const Index = () => {
   };
 
   const handleAddComment = () => {
-    if (newComment.trim() && isLoggedIn) {
+    if (newComment.trim() && isLoggedIn && currentUser) {
       const comment: Comment = {
         id: Date.now().toString(),
-        author: currentUser?.username || 'Вы',
+        author: currentUser.username,
+        authorId: currentUser.id,
         text: newComment,
         time: 'только что',
-        avatar: currentUser?.avatar || 'ВЫ',
+        avatar: currentUser.avatar,
         likes: 0,
+        imageUrl: commentImage ? URL.createObjectURL(commentImage) : undefined,
+        linkUrl: commentLink.url || undefined,
+        linkText: commentLink.text || undefined,
+        replies: [],
+        parentId: replyingTo || undefined,
       };
-      setComments([comment, ...comments]);
+      
+      if (replyingTo) {
+        setComments(comments.map(c => {
+          if (c.id === replyingTo) {
+            return { ...c, replies: [...(c.replies || []), comment] };
+          }
+          return c;
+        }));
+      } else {
+        setComments([comment, ...comments]);
+      }
+      
       setNewComment('');
+      setCommentImage(null);
+      setCommentLink({ url: '', text: '' });
+      setReplyingTo(null);
     }
   };
 
@@ -168,12 +207,16 @@ const Index = () => {
 
   const handleLogin = () => {
     if (loginForm.username && loginForm.password) {
-      setCurrentUser({
+      const newUser: User = {
+        id: 'user_' + Date.now(),
         username: loginForm.username,
         email: loginForm.username + '@metrotube.com',
         avatar: loginForm.username.substring(0, 2).toUpperCase(),
         channelDescription: 'Добро пожаловать на мой канал!',
-      });
+        subscribers: 0,
+        subscribedTo: [],
+      };
+      setCurrentUser(newUser);
       setIsLoggedIn(true);
       setCurrentSection('home');
     }
@@ -181,12 +224,16 @@ const Index = () => {
 
   const handleRegister = () => {
     if (registerForm.username && registerForm.email && registerForm.password) {
-      setCurrentUser({
+      const newUser: User = {
+        id: 'user_' + Date.now(),
         username: registerForm.username,
         email: registerForm.email,
         avatar: registerForm.username.substring(0, 2).toUpperCase(),
         channelDescription: 'Добро пожаловать на мой канал!',
-      });
+        subscribers: 0,
+        subscribedTo: [],
+      };
+      setCurrentUser(newUser);
       setIsLoggedIn(true);
       setCurrentSection('home');
     }
@@ -221,12 +268,88 @@ const Index = () => {
     ));
   };
 
-  const handleUploadVideo = () => {
-    if (uploadFile && uploadForm.title && isLoggedIn) {
+  const handleUploadVideo = async () => {
+    if (uploadFile && uploadForm.title && isLoggedIn && currentUser) {
+      if (uploadFile.size > 10 * 1024 * 1024 * 1024) {
+        alert('Размер файла превышает 10 ГБ!');
+        return;
+      }
+      
+      setIsUploading(true);
+      
+      for (let i = 0; i <= 100; i += 10) {
+        await new Promise(resolve => setTimeout(resolve, 200));
+        setUploadProgress(i);
+      }
+      
+      const newVideo: Video = {
+        id: 'video_' + Date.now(),
+        title: uploadForm.title,
+        channel: currentUser.username,
+        channelAvatar: currentUser.avatar,
+        views: '0',
+        time: 'только что',
+        thumbnail: uploadThumbnail ? '🎬' : '📹',
+        color: 'bg-metro-blue',
+        likes: '0',
+        dislikes: '0',
+      };
+      
+      setMyVideos([newVideo, ...myVideos]);
       alert(`Видео "${uploadForm.title}" успешно загружено!`);
+      
       setUploadFile(null);
+      setUploadThumbnail(null);
       setUploadForm({ title: '', description: '' });
+      setUploadProgress(0);
+      setIsUploading(false);
+      handleSectionChange('channel');
     }
+  };
+  
+  const handleSubscribe = (channelId: string) => {
+    if (!isLoggedIn || !currentUser) return;
+    
+    const isSubscribed = currentUser.subscribedTo.includes(channelId);
+    
+    if (isSubscribed) {
+      setCurrentUser({
+        ...currentUser,
+        subscribedTo: currentUser.subscribedTo.filter(id => id !== channelId),
+      });
+    } else {
+      setCurrentUser({
+        ...currentUser,
+        subscribedTo: [...currentUser.subscribedTo, channelId],
+      });
+    }
+  };
+  
+  const handleDeleteComment = (commentId: string) => {
+    setComments(comments.filter(c => c.id !== commentId));
+  };
+  
+  const handleDeleteVideo = (videoId: string) => {
+    setMyVideos(myVideos.filter(v => v.id !== videoId));
+  };
+  
+  const handleSaveChannelEdit = async () => {
+    if (!currentUser) return;
+    
+    const updatedUser: User = {
+      ...currentUser,
+      channelDescription: channelEditForm.description || currentUser.channelDescription,
+      channelBanner: channelEditForm.banner ? URL.createObjectURL(channelEditForm.banner) : currentUser.channelBanner,
+    };
+    
+    setCurrentUser(updatedUser);
+    setIsEditingChannel(false);
+  };
+  
+  const formatSubscribers = (count: number): string => {
+    if (count >= 1000000) return `${(count / 1000000).toFixed(1)}М`;
+    if (count >= 1000) return `${(count / 1000).toFixed(0)}К`;
+    return count.toString();
   };
 
   const navItems = [
@@ -412,16 +535,16 @@ const Index = () => {
   return (
     <div className={`min-h-screen bg-background text-foreground transition-all duration-300 ${viewMode === 'mobile' ? 'max-w-md mx-auto' : ''} ${sectionTransition ? 'opacity-0' : 'opacity-100'}`} style={{ backgroundImage: theme === 'dark' ? 'radial-gradient(circle at 20% 50%, rgba(32, 145, 196, 0.05) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(146, 64, 179, 0.05) 0%, transparent 50%)' : 'radial-gradient(circle at 20% 50%, rgba(32, 145, 196, 0.03) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(146, 64, 179, 0.03) 0%, transparent 50%)' }}>
       <header className="bg-background/95 backdrop-blur-md border-b-2 border-primary sticky top-0 z-50">
-        <div className="container mx-auto px-6 py-3 flex items-center gap-6">
+        <div className={`container mx-auto flex items-center gap-3 md:gap-6 ${viewMode === 'mobile' ? 'px-3 py-2' : 'px-6 py-3'}`}>
           <button 
             onClick={() => setCurrentSection('home')}
-            className="flex items-center gap-3 hover:opacity-80 transition-opacity group"
+            className="flex items-center gap-2 md:gap-3 hover:opacity-80 transition-opacity group"
           >
-            <div className="w-12 h-12 bg-primary flex items-center justify-center text-2xl overflow-hidden relative">
+            <div className={`${viewMode === 'mobile' ? 'w-10 h-10 text-xl' : 'w-12 h-12 text-2xl'} bg-primary flex items-center justify-center overflow-hidden relative`}>
               <div className="tile-content absolute inset-0 flex items-center justify-center">📺</div>
             </div>
             <div className="text-left">
-              <h1 className="text-2xl font-light tracking-wide">MetroTube</h1>
+              <h1 className={`${viewMode === 'mobile' ? 'text-lg' : 'text-2xl'} font-light tracking-wide`}>MetroTube</h1>
             </div>
           </button>
           <div className="flex-1 max-w-xl">
@@ -434,44 +557,44 @@ const Index = () => {
                   setSearchQuery(e.target.value);
                   if (e.target.value) setCurrentSection('search');
                 }}
-                className="w-full bg-muted/50 border-2 border-border hover:border-primary focus:border-primary h-11 transition-colors"
+                className={`w-full bg-muted/50 border-2 border-border hover:border-primary focus:border-primary transition-colors ${viewMode === 'mobile' ? 'h-9 text-sm' : 'h-11'}`}
               />
-              <Button size="sm" className="absolute right-1 top-1 bg-primary hover:bg-primary/90 h-9">
-                <Icon name="Search" size={16} />
+              <Button size="sm" className={`absolute right-1 top-1 bg-primary hover:bg-primary/90 ${viewMode === 'mobile' ? 'h-7' : 'h-9'}`}>
+                <Icon name="Search" size={14} />
               </Button>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className="bg-muted/50 px-3 py-2 hover:brightness-110 transition-all">
-              <Icon name={theme === 'dark' ? 'Sun' : 'Moon'} size={20} />
+          <div className="flex items-center gap-2">
+            <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className={`bg-muted/50 hover:brightness-110 transition-all ${viewMode === 'mobile' ? 'px-2 py-1.5' : 'px-3 py-2'}`}>
+              <Icon name={theme === 'dark' ? 'Sun' : 'Moon'} size={viewMode === 'mobile' ? 16 : 20} />
             </button>
-            <button onClick={() => setViewMode(viewMode === 'desktop' ? 'mobile' : 'desktop')} className="bg-muted/50 px-3 py-2 hover:brightness-110 transition-all">
-              <Icon name={viewMode === 'desktop' ? 'Smartphone' : 'Monitor'} size={20} />
+            <button onClick={() => setViewMode(viewMode === 'desktop' ? 'mobile' : 'desktop')} className={`bg-muted/50 hover:brightness-110 transition-all ${viewMode === 'mobile' ? 'px-2 py-1.5' : 'px-3 py-2'}`}>
+              <Icon name={viewMode === 'desktop' ? 'Smartphone' : 'Monitor'} size={viewMode === 'mobile' ? 16 : 20} />
             </button>
             {isLoggedIn ? (
-              <div className="flex items-center gap-2">
-                <div className="bg-metro-green px-4 py-2 flex items-center gap-2">
-                  <div className="w-8 h-8 bg-white/20 flex items-center justify-center text-xs font-semibold">
+              <div className="flex items-center gap-1 md:gap-2">
+                <div className={`bg-metro-green flex items-center gap-2 ${viewMode === 'mobile' ? 'px-2 py-1.5' : 'px-4 py-2'}`}>
+                  <div className={`${viewMode === 'mobile' ? 'w-6 h-6 text-[10px]' : 'w-8 h-8 text-xs'} bg-white/20 flex items-center justify-center font-semibold`}>
                     {currentUser?.avatar}
                   </div>
-                  <span className="font-medium">{currentUser?.username}</span>
+                  {viewMode === 'desktop' && <span className="font-medium">{currentUser?.username}</span>}
                 </div>
-                <button onClick={handleLogout} className="bg-destructive px-3 py-2 hover:brightness-110 transition-all">
-                  <Icon name="LogOut" size={20} />
+                <button onClick={handleLogout} className={`bg-destructive hover:brightness-110 transition-all ${viewMode === 'mobile' ? 'px-2 py-1.5' : 'px-3 py-2'}`}>
+                  <Icon name="LogOut" size={viewMode === 'mobile' ? 16 : 20} />
                 </button>
               </div>
             ) : (
-              <button onClick={() => handleSectionChange('login')} className="bg-metro-green px-4 py-2 hover:brightness-110 transition-all flex items-center gap-2">
-                <Icon name="LogIn" size={20} />
-                <span className="font-medium">Войти</span>
+              <button onClick={() => handleSectionChange('login')} className={`bg-metro-green hover:brightness-110 transition-all flex items-center gap-2 ${viewMode === 'mobile' ? 'px-2 py-1.5' : 'px-4 py-2'}`}>
+                <Icon name="LogIn" size={viewMode === 'mobile' ? 16 : 20} />
+                {viewMode === 'desktop' && <span className="font-medium">Войти</span>}
               </button>
             )}
           </div>
         </div>
       </header>
 
-      <div className="container mx-auto px-6 py-6">
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 xl:grid-cols-8 gap-3 mb-8 auto-rows-fr">
+      <div className={`container mx-auto ${viewMode === 'mobile' ? 'px-3 py-3' : 'px-6 py-6'}`}>
+        <div className={`grid mb-8 auto-rows-fr ${viewMode === 'mobile' ? 'grid-cols-2 gap-2' : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 xl:grid-cols-8 gap-3'}`}>
           {navItems.map((item, index) => (
             <button
               key={item.id}
@@ -557,33 +680,35 @@ const Index = () => {
                       </div>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <button onClick={() => setIsPlaying(!isPlaying)} className="hover:scale-110 transition-transform">
-                            <Icon name={isPlaying ? 'Pause' : 'Play'} size={24} className="text-white" />
+                          <button onClick={() => setIsPlaying(!isPlaying)} className="metro-control w-10 h-10">
+                            <Icon name={isPlaying ? 'Pause' : 'Play'} size={20} />
                           </button>
-                          <button onClick={handleSkipBack} className="hover:scale-110 transition-transform">
-                            <Icon name="SkipBack" size={20} className="text-white" />
+                          <button onClick={handleSkipBack} className="metro-control w-8 h-8">
+                            <Icon name="SkipBack" size={16} />
                           </button>
-                          <button onClick={handleSkipForward} className="hover:scale-110 transition-transform">
-                            <Icon name="SkipForward" size={20} className="text-white" />
+                          <button onClick={handleSkipForward} className="metro-control w-8 h-8">
+                            <Icon name="SkipForward" size={16} />
                           </button>
-                          <div className="flex items-center gap-2">
-                            <Icon name="Volume2" size={20} className="text-white" />
+                          <div className="flex items-center gap-2 bg-black/50 px-3 py-2">
+                            <button className="metro-control w-7 h-7">
+                              <Icon name="Volume2" size={14} />
+                            </button>
                             <input 
                               type="range" 
                               min="0" 
                               max="100" 
                               value={volume} 
                               onChange={(e) => setVolume(Number(e.target.value))}
-                              className="w-20 h-1 accent-primary"
+                              className="w-20 h-1 accent-primary cursor-pointer"
                             />
-                            <span className="text-white text-xs w-8">{volume}%</span>
+                            <span className="text-white text-xs w-8 font-medium">{volume}%</span>
                           </div>
                         </div>
                         <div className="flex items-center gap-3">
-                          <span className="text-white text-sm">{Math.floor(videoProgress / 100 * 10)}:{Math.floor((videoProgress / 100 * 600) % 60).toString().padStart(2, '0')} / 10:00</span>
+                          <span className="text-white text-sm font-medium bg-black/50 px-3 py-1">{Math.floor(videoProgress / 100 * 10)}:{Math.floor((videoProgress / 100 * 600) % 60).toString().padStart(2, '0')} / 10:00</span>
                           <div className="relative">
-                            <button onClick={() => setShowQualityMenu(!showQualityMenu)} className="hover:scale-110 transition-transform">
-                              <Icon name="Settings" size={20} className="text-white" />
+                            <button onClick={() => setShowQualityMenu(!showQualityMenu)} className="metro-control w-8 h-8">
+                              <Icon name="Settings" size={16} />
                             </button>
                             {showQualityMenu && (
                               <div className="absolute bottom-full right-0 mb-2 bg-black/90 border border-white/20 p-2 space-y-1">
@@ -600,8 +725,8 @@ const Index = () => {
                               </div>
                             )}
                           </div>
-                          <button className="hover:scale-110 transition-transform">
-                            <Icon name="Maximize" size={20} className="text-white" />
+                          <button className="metro-control w-8 h-8">
+                            <Icon name="Maximize" size={16} />
                           </button>
                         </div>
                       </div>
@@ -651,12 +776,25 @@ const Index = () => {
                       </div>
                       <div>
                         <div className="font-semibold text-base">{selectedVideo.channel}</div>
-                        <div className="text-sm text-muted-foreground">1.2М подписчиков</div>
+                        <div className="text-sm text-muted-foreground">
+                          {formatSubscribers(mockChannels.find(c => c.name === selectedVideo.channel)?.subscribers || 0)} подписчиков
+                        </div>
                       </div>
                     </div>
-                    <button className="ml-auto bg-metro-green px-6 py-2 hover:brightness-110 transition-all font-medium">
-                      Подписаться
-                    </button>
+                    {isLoggedIn && currentUser && (
+                      <button 
+                        onClick={() => handleSubscribe(mockChannels.find(c => c.name === selectedVideo.channel)?.id || '')}
+                        className={`ml-auto px-6 py-2 hover:brightness-110 transition-all font-medium ${
+                          currentUser.subscribedTo.includes(mockChannels.find(c => c.name === selectedVideo.channel)?.id || '') 
+                            ? 'bg-muted/50' 
+                            : 'bg-metro-green'
+                        }`}
+                      >
+                        {currentUser.subscribedTo.includes(mockChannels.find(c => c.name === selectedVideo.channel)?.id || '') 
+                          ? 'Отписаться' 
+                          : 'Подписаться'}
+                      </button>
+                    )}
                   </div>
 
                   <div className="bg-card/50 p-5 border-l-4 border-primary">
@@ -677,6 +815,14 @@ const Index = () => {
                           {currentUser?.avatar}
                         </div>
                         <div className="flex-1 space-y-3">
+                          {replyingTo && (
+                            <div className="bg-muted/30 p-2 flex items-center justify-between text-sm">
+                              <span>Ответ на комментарий</span>
+                              <button onClick={() => setReplyingTo(null)} className="text-destructive hover:brightness-110">
+                                <Icon name="X" size={16} />
+                              </button>
+                            </div>
+                          )}
                           <Textarea
                             placeholder="Добавить комментарий..."
                             value={newComment}
@@ -684,20 +830,70 @@ const Index = () => {
                             className="bg-muted/50 border-2 border-border focus:border-primary resize-none transition-colors"
                             rows={2}
                           />
-                          <div className="flex gap-3 justify-end">
-                            <button
-                              onClick={() => setNewComment('')}
-                              className="px-4 py-1.5 hover:bg-muted transition-colors text-sm"
-                            >
-                              Отмена
-                            </button>
-                            <button
-                              onClick={handleAddComment}
-                              disabled={!newComment.trim()}
-                              className="bg-primary px-6 py-1.5 hover:brightness-110 transition-all disabled:opacity-40 disabled:cursor-not-allowed text-sm font-medium"
-                            >
-                              Отправить
-                            </button>
+                          {commentImage && (
+                            <div className="relative inline-block">
+                              <img src={URL.createObjectURL(commentImage)} alt="preview" className="max-w-xs h-20 object-cover" />
+                              <button onClick={() => setCommentImage(null)} className="absolute top-0 right-0 bg-destructive p-1">
+                                <Icon name="X" size={12} />
+                              </button>
+                            </div>
+                          )}
+                          {commentLink.url && (
+                            <div className="text-xs text-primary">
+                              Ссылка: {commentLink.text || commentLink.url}
+                            </div>
+                          )}
+                          <div className="flex gap-3 justify-between">
+                            <div className="flex gap-2">
+                              <label className="cursor-pointer px-3 py-1.5 bg-muted/50 hover:bg-muted transition-colors text-sm flex items-center gap-1">
+                                <Icon name="Image" size={14} />
+                                <span>Фото</span>
+                                <input 
+                                  type="file" 
+                                  accept="image/*"
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file && file.size <= 100 * 1024 * 1024) {
+                                      setCommentImage(file);
+                                    } else {
+                                      alert('Размер файла превышает 100 МБ!');
+                                    }
+                                  }}
+                                  className="hidden"
+                                />
+                              </label>
+                              <button
+                                onClick={() => {
+                                  const url = prompt('Введите URL ссылки:');
+                                  const text = prompt('Текст ссылки (необязательно):');
+                                  if (url) setCommentLink({ url, text: text || '' });
+                                }}
+                                className="px-3 py-1.5 bg-muted/50 hover:bg-muted transition-colors text-sm flex items-center gap-1"
+                              >
+                                <Icon name="Link" size={14} />
+                                <span>Ссылка</span>
+                              </button>
+                            </div>
+                            <div className="flex gap-3">
+                              <button
+                                onClick={() => {
+                                  setNewComment('');
+                                  setCommentImage(null);
+                                  setCommentLink({ url: '', text: '' });
+                                  setReplyingTo(null);
+                                }}
+                                className="px-4 py-1.5 hover:bg-muted transition-colors text-sm"
+                              >
+                                Отмена
+                              </button>
+                              <button
+                                onClick={handleAddComment}
+                                disabled={!newComment.trim()}
+                                className="bg-primary px-6 py-1.5 hover:brightness-110 transition-all disabled:opacity-40 disabled:cursor-not-allowed text-sm font-medium"
+                              >
+                                Отправить
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -712,39 +908,104 @@ const Index = () => {
 
                     <div className="space-y-6 pt-4">
                       {comments.map((comment) => (
-                        <div key={comment.id} className="flex gap-3 pb-4 border-b border-border/50 last:border-0">
-                          <div className="w-10 h-10 bg-accent flex items-center justify-center text-xs font-semibold flex-shrink-0">
-                            {comment.avatar}
-                          </div>
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-2">
-                              <span className="font-semibold text-base">{comment.author}</span>
-                              <span className="text-xs text-muted-foreground">{comment.time}</span>
+                        <div key={comment.id} className="space-y-3">
+                          <div className="flex gap-3 pb-4 border-b border-border/50">
+                            <div className="w-10 h-10 bg-accent flex items-center justify-center text-xs font-semibold flex-shrink-0">
+                              {comment.avatar}
                             </div>
-                            <p className="text-foreground/90 leading-relaxed mb-3">{comment.text}</p>
-                            <div className="flex gap-4">
-                              <button 
-                                onClick={() => handleCommentLike(comment.id)}
-                                disabled={!isLoggedIn}
-                                className="flex items-center gap-2 px-3 py-1 hover:bg-muted/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                              >
-                                <Icon name="ThumbsUp" size={16} />
-                                <span className="text-xs">{comment.likes}</span>
-                              </button>
-                              <button 
-                                disabled={!isLoggedIn}
-                                className="flex items-center gap-2 px-3 py-1 hover:bg-muted/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                              >
-                                <Icon name="ThumbsDown" size={16} />
-                              </button>
-                              <button 
-                                disabled={!isLoggedIn}
-                                className="px-3 py-1 hover:bg-muted/50 transition-colors text-xs disabled:opacity-50 disabled:cursor-not-allowed"
-                              >
-                                Ответить
-                              </button>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-3 mb-2">
+                                <span className="font-semibold text-base">{comment.author}</span>
+                                <span className="text-xs text-muted-foreground">{comment.time}</span>
+                              </div>
+                              <p className="text-foreground/90 leading-relaxed mb-3">{comment.text}</p>
+                              {comment.imageUrl && (
+                                <img src={comment.imageUrl} alt="comment" className="max-w-md mb-3 border border-border" />
+                              )}
+                              {comment.linkUrl && (
+                                <a href={comment.linkUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:brightness-110 text-sm flex items-center gap-1 mb-3">
+                                  <Icon name="Link" size={14} />
+                                  {comment.linkText || comment.linkUrl}
+                                </a>
+                              )}
+                              <div className="flex gap-4">
+                                <button 
+                                  onClick={() => handleCommentLike(comment.id)}
+                                  disabled={!isLoggedIn}
+                                  className="flex items-center gap-2 px-3 py-1 hover:bg-muted/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  <Icon name="ThumbsUp" size={16} />
+                                  <span className="text-xs">{comment.likes}</span>
+                                </button>
+                                <button 
+                                  disabled={!isLoggedIn}
+                                  className="flex items-center gap-2 px-3 py-1 hover:bg-muted/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  <Icon name="ThumbsDown" size={16} />
+                                </button>
+                                <button 
+                                  onClick={() => setReplyingTo(comment.id)}
+                                  disabled={!isLoggedIn}
+                                  className="px-3 py-1 hover:bg-muted/50 transition-colors text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  Ответить
+                                </button>
+                                {isLoggedIn && currentUser && comment.authorId === currentUser.id && (
+                                  <button 
+                                    onClick={() => handleDeleteComment(comment.id)}
+                                    className="px-3 py-1 text-destructive hover:bg-destructive/10 transition-colors text-xs"
+                                  >
+                                    Удалить
+                                  </button>
+                                )}
+                              </div>
                             </div>
                           </div>
+                          {comment.replies && comment.replies.length > 0 && (
+                            <div className="ml-12 space-y-3">
+                              {comment.replies.map((reply) => (
+                                <div key={reply.id} className="flex gap-3 pb-3 border-b border-border/30">
+                                  <div className="w-8 h-8 bg-accent flex items-center justify-center text-xs font-semibold flex-shrink-0">
+                                    {reply.avatar}
+                                  </div>
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <span className="font-semibold text-sm">{reply.author}</span>
+                                      <span className="text-xs text-muted-foreground">{reply.time}</span>
+                                    </div>
+                                    <p className="text-sm text-foreground/90 leading-relaxed mb-2">{reply.text}</p>
+                                    {reply.imageUrl && (
+                                      <img src={reply.imageUrl} alt="reply" className="max-w-xs mb-2 border border-border" />
+                                    )}
+                                    {reply.linkUrl && (
+                                      <a href={reply.linkUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:brightness-110 text-xs flex items-center gap-1 mb-2">
+                                        <Icon name="Link" size={12} />
+                                        {reply.linkText || reply.linkUrl}
+                                      </a>
+                                    )}
+                                    <div className="flex gap-3">
+                                      <button 
+                                        onClick={() => handleCommentLike(reply.id)}
+                                        disabled={!isLoggedIn}
+                                        className="flex items-center gap-1 px-2 py-0.5 hover:bg-muted/50 transition-colors disabled:opacity-50 text-xs"
+                                      >
+                                        <Icon name="ThumbsUp" size={14} />
+                                        <span>{reply.likes}</span>
+                                      </button>
+                                      {isLoggedIn && currentUser && reply.authorId === currentUser.id && (
+                                        <button 
+                                          onClick={() => handleDeleteComment(reply.id)}
+                                          className="px-2 py-0.5 text-destructive hover:bg-destructive/10 transition-colors text-xs"
+                                        >
+                                          Удалить
+                                        </button>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -843,27 +1104,44 @@ const Index = () => {
                 </div>
                 <div>
                   <h3 className="text-2xl font-light mb-4">Мои видео</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {mockVideos.slice(0, 4).map((video) => (
-                      <div
-                        key={video.id}
-                        onClick={() => handleVideoClick(video)}
-                        className="cursor-pointer group"
-                      >
-                        <div className={`${video.color} aspect-video metro-tile flex items-center justify-center text-6xl mb-3 shadow-md`}>
-                          {video.thumbnail}
+                  {myVideos.length === 0 ? (
+                    <div className="bg-card/30 p-12 text-center border border-border">
+                      <Icon name="Video" size={48} className="mx-auto text-muted-foreground mb-4" />
+                      <p className="text-muted-foreground mb-4">У вас пока нет видео</p>
+                      <button onClick={() => handleSectionChange('upload')} className="bg-primary px-6 py-2 hover:brightness-110 transition-all">
+                        Загрузить первое видео
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                      {myVideos.map((video) => (
+                        <div
+                          key={video.id}
+                          className="cursor-pointer group relative"
+                        >
+                          <div onClick={() => handleVideoClick(video)} className={`${video.color} aspect-video metro-tile flex items-center justify-center text-6xl mb-3 shadow-md`}>
+                            {video.thumbnail}
+                          </div>
+                          <h3 className="font-normal mb-1 line-clamp-2 group-hover:text-primary transition-colors text-base">
+                            {video.title}
+                          </h3>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <span>{video.views} просмотров</span>
+                              <span>•</span>
+                              <span>{video.time}</span>
+                            </div>
+                            <button 
+                              onClick={() => handleDeleteVideo(video.id)}
+                              className="text-destructive hover:brightness-110 text-xs px-2 py-1"
+                            >
+                              Удалить
+                            </button>
+                          </div>
                         </div>
-                        <h3 className="font-normal mb-1 line-clamp-2 group-hover:text-primary transition-colors text-base">
-                          {video.title}
-                        </h3>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <span>{video.views} просмотров</span>
-                          <span>•</span>
-                          <span>{video.time}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             ) : currentSection === 'subscriptions' ? (
@@ -879,11 +1157,18 @@ const Index = () => {
                       </div>
                       <div className="text-center">
                         <h3 className="font-semibold mb-1">{channel.name}</h3>
-                        <p className="text-sm text-muted-foreground">{channel.subscribers} подписчиков</p>
+                        <p className="text-sm text-muted-foreground">{formatSubscribers(channel.subscribers)} подписчиков</p>
                       </div>
-                      <button className="bg-muted/50 px-4 py-1.5 text-sm hover:brightness-110 transition-all w-full">
-                        Подписан
-                      </button>
+                      {isLoggedIn && currentUser && (
+                        <button 
+                          onClick={() => handleSubscribe(channel.id)}
+                          className={`px-4 py-1.5 text-sm hover:brightness-110 transition-all w-full ${
+                            currentUser.subscribedTo.includes(channel.id) ? 'bg-muted/50' : 'bg-metro-green'
+                          }`}
+                        >
+                          {currentUser.subscribedTo.includes(channel.id) ? 'Отписаться' : 'Подписаться'}
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -1083,20 +1368,52 @@ const Index = () => {
                     <div className="border-2 border-dashed border-primary/50 p-16 text-center space-y-4 hover:border-primary transition-colors cursor-pointer bg-muted/20">
                       <Icon name="Upload" size={64} className="mx-auto text-primary" />
                       <div>
-                        <h3 className="text-xl font-light mb-2">Загрузите видео</h3>
+                        <h3 className="text-xl font-light mb-2">Загрузите видео (до 10 ГБ)</h3>
                         <p className="text-sm text-muted-foreground">Перетащите файл или нажмите для выбора</p>
-                        {uploadFile && <p className="text-sm text-primary mt-2">Выбран: {uploadFile.name}</p>}
+                        {uploadFile && (
+                          <div className="mt-3">
+                            <p className="text-sm text-primary">Выбран: {uploadFile.name}</p>
+                            <p className="text-xs text-muted-foreground">Размер: {(uploadFile.size / (1024 * 1024)).toFixed(2)} МБ</p>
+                          </div>
+                        )}
                       </div>
                       <input 
                         type="file" 
                         accept="video/*"
-                        onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file && file.size > 10 * 1024 * 1024 * 1024) {
+                            alert('Размер файла превышает 10 ГБ!');
+                            return;
+                          }
+                          setUploadFile(file || null);
+                        }}
                         className="hidden"
                         id="video-upload"
                       />
                       <label htmlFor="video-upload" className="bg-primary px-8 py-3 hover:brightness-110 transition-all font-medium inline-block cursor-pointer">
-                        Выбрать файл
+                        Выбрать видеофайл
                       </label>
+                      {uploadFile && !uploadThumbnail && (
+                        <div className="mt-4">
+                          <input 
+                            type="file" 
+                            accept="image/*"
+                            onChange={(e) => setUploadThumbnail(e.target.files?.[0] || null)}
+                            className="hidden"
+                            id="thumbnail-upload"
+                          />
+                          <label htmlFor="thumbnail-upload" className="bg-metro-cyan px-6 py-2 hover:brightness-110 transition-all text-sm inline-block cursor-pointer">
+                            Добавить превью
+                          </label>
+                        </div>
+                      )}
+                      {uploadThumbnail && (
+                        <div className="mt-3">
+                          <p className="text-sm text-metro-cyan">Превью: {uploadThumbnail.name}</p>
+                          <button onClick={() => setUploadThumbnail(null)} className="text-xs text-destructive mt-1">Удалить</button>
+                        </div>
+                      )}
                     </div>
                     <div className="space-y-5">
                       <div>
@@ -1118,12 +1435,25 @@ const Index = () => {
                           rows={5} 
                         />
                       </div>
+                      {isUploading && (
+                        <div className="space-y-2">
+                          <div className="w-full h-2 bg-muted/50">
+                            <div 
+                              className="h-full bg-primary transition-all duration-300" 
+                              style={{ width: `${uploadProgress}%` }}
+                            />
+                          </div>
+                          <p className="text-sm text-center text-muted-foreground">
+                            Загрузка: {uploadProgress}%
+                          </p>
+                        </div>
+                      )}
                       <Button 
                         onClick={handleUploadVideo}
-                        disabled={!uploadFile || !uploadForm.title}
+                        disabled={!uploadFile || !uploadForm.title || isUploading}
                         className="w-full h-12 text-base bg-primary hover:bg-primary/90 disabled:opacity-50"
                       >
-                        Опубликовать видео
+                        {isUploading ? 'Загрузка...' : 'Опубликовать видео'}
                       </Button>
                     </div>
                   </div>

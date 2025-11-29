@@ -157,4 +157,46 @@
   .tile-large {
     aspect-ratio: 1;
   }
+
+  .metro-button {
+    @apply transition-all duration-150 hover:brightness-110 active:scale-95;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+
+  .metro-button:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  }
+
+  .metro-control {
+    @apply bg-white/90 text-black flex items-center justify-center;
+    transition: all 0.15s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  }
+
+  .metro-control:hover {
+    @apply bg-white brightness-110 scale-110;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+  }
+
+  .metro-control:active {
+    @apply scale-95;
+  }
+
+  @media (max-width: 768px) {
+    .mobile-header {
+      @apply px-4 py-2;
+    }
+
+    .mobile-nav {
+      @apply grid-cols-2 gap-2;
+    }
+
+    .mobile-video-controls {
+      @apply flex-col gap-2;
+    }
+
+    .mobile-comment {
+      @apply text-sm;
+    }
+  }
 }
