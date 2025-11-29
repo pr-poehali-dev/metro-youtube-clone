@@ -166,6 +166,42 @@ const Index = () => {
     document.documentElement.classList.toggle('light', theme === 'light');
   }, [theme]);
 
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const isCurrentlyFullscreen = !!(document.fullscreenElement || 
+        (document as any).webkitFullscreenElement || 
+        (document as any).msFullscreenElement);
+      setIsFullscreen(isCurrentlyFullscreen);
+    };
+
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isFullscreen) {
+        handleFullscreen();
+      }
+      if (currentSection === 'video' && selectedVideo) {
+        if (e.key === ' ') {
+          e.preventDefault();
+          updatePlayerState(selectedVideo.id, { isPlaying: !getPlayerState(selectedVideo.id).isPlaying });
+        }
+        if (e.key === 'f' || e.key === 'F') {
+          handleFullscreen();
+        }
+      }
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('msfullscreenchange', handleFullscreenChange);
+    document.addEventListener('keydown', handleKeyPress);
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('msfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('keydown', handleKeyPress);
+    };
+  }, [isFullscreen, currentSection, selectedVideo]);
+
   const handleVideoClick = (video: Video) => {
     setSelectedVideo(video);
     setCurrentSection('video');
@@ -254,13 +290,30 @@ const Index = () => {
     }
   };
 
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
   const handleRegister = () => {
     if (registerForm.username && registerForm.email && registerForm.password) {
+      if (!validateEmail(registerForm.email)) {
+        alert('Пожалуйста, введите корректный email адрес (например: user@example.com)');
+        return;
+      }
+      
       const existingUser = users.find(u => u.username === registerForm.username);
       if (existingUser) {
         alert('Пользователь с таким ником уже существует. Пожалуйста, выберите другой ник.');
         return;
       }
+      
+      const existingEmail = users.find(u => u.email === registerForm.email);
+      if (existingEmail) {
+        alert('Пользователь с таким email уже существует.');
+        return;
+      }
+      
       const newUser: User = {
         id: 'user_' + Date.now(),
         username: registerForm.username,
@@ -428,7 +481,27 @@ const Index = () => {
   };
 
   const handleFullscreen = () => {
-    setIsFullscreen(!isFullscreen);
+    const elem = document.documentElement;
+    
+    if (!isFullscreen) {
+      if (elem.requestFullscreen) {
+        elem.requestFullscreen();
+      } else if ((elem as any).webkitRequestFullscreen) {
+        (elem as any).webkitRequestFullscreen();
+      } else if ((elem as any).msRequestFullscreen) {
+        (elem as any).msRequestFullscreen();
+      }
+      setIsFullscreen(true);
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      } else if ((document as any).webkitExitFullscreen) {
+        (document as any).webkitExitFullscreen();
+      } else if ((document as any).msExitFullscreen) {
+        (document as any).msExitFullscreen();
+      }
+      setIsFullscreen(false);
+    }
   };
 
   const addToWatchHistory = (video: Video) => {
@@ -814,11 +887,11 @@ const Index = () => {
 
             <div className="grid lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2 space-y-6">
-                <div className="relative group bg-black">
-                  <div className={`${selectedVideo.color} aspect-video flex items-center justify-center text-9xl shadow-lg cursor-pointer relative`}
-                    onClick={() => setIsPlaying(!isPlaying)}
+                <div className={`relative group bg-black ${isFullscreen ? 'fixed inset-0 z-50 flex items-center justify-center' : ''}`}>
+                  <div className={`${selectedVideo.color} ${isFullscreen ? 'w-full h-full' : 'aspect-video'} flex items-center justify-center ${isFullscreen ? 'text-[20rem]' : 'text-9xl'} shadow-lg cursor-pointer relative`}
+                    onClick={() => updatePlayerState(selectedVideo.id, { isPlaying: !getPlayerState(selectedVideo.id).isPlaying })}
                   >
-                    {isPlaying ? (
+                    {getPlayerState(selectedVideo.id).isPlaying ? (
                       <div className="absolute inset-0 flex items-center justify-center">
                         {selectedVideo.thumbnail}
                         <div className="absolute inset-0 bg-black/40" />
@@ -828,7 +901,7 @@ const Index = () => {
                         {selectedVideo.thumbnail}
                         <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity">
                           <div className="bg-white/90 rounded-full p-4">
-                            <Icon name="Play" size={48} className="text-black" />
+                            <Icon name="Play" size={isFullscreen ? 64 : 48} className="text-black" />
                           </div>
                         </div>
                       </>
@@ -1625,6 +1698,103 @@ const Index = () => {
                     </div>
                   </>
                 )}
+              </div>
+            ) : currentSection === 'login' ? (
+              <div className="max-w-md mx-auto">
+                <div className="bg-card/30 border-2 border-border p-8 space-y-6">
+                  <div className="text-center">
+                    <h3 className="text-3xl font-light mb-2">Вход в MetroTube</h3>
+                    <p className="text-sm text-muted-foreground">Введите свои данные для входа</p>
+                  </div>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Логин</label>
+                      <Input 
+                        value={loginForm.username}
+                        onChange={(e) => setLoginForm({...loginForm, username: e.target.value})}
+                        placeholder="Введите логин"
+                        className="bg-muted/50 border-2 border-border focus:border-primary h-11"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Пароль</label>
+                      <Input 
+                        type="password"
+                        value={loginForm.password}
+                        onChange={(e) => setLoginForm({...loginForm, password: e.target.value})}
+                        placeholder="Введите пароль"
+                        className="bg-muted/50 border-2 border-border focus:border-primary h-11"
+                      />
+                    </div>
+                  </div>
+                  <Button 
+                    onClick={handleLogin}
+                    disabled={!loginForm.username || !loginForm.password}
+                    className="w-full h-11 bg-primary hover:bg-primary/90"
+                  >
+                    Войти
+                  </Button>
+                  <div className="text-center text-sm">
+                    <span className="text-muted-foreground">Нет аккаунта? </span>
+                    <button onClick={() => handleSectionChange('register')} className="text-primary hover:brightness-110">
+                      Зарегистрироваться
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : currentSection === 'register' ? (
+              <div className="max-w-md mx-auto">
+                <div className="bg-card/30 border-2 border-border p-8 space-y-6">
+                  <div className="text-center">
+                    <h3 className="text-3xl font-light mb-2">Регистрация</h3>
+                    <p className="text-sm text-muted-foreground">Создайте новый аккаунт</p>
+                  </div>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Логин</label>
+                      <Input 
+                        value={registerForm.username}
+                        onChange={(e) => setRegisterForm({...registerForm, username: e.target.value})}
+                        placeholder="Придумайте логин"
+                        className="bg-muted/50 border-2 border-border focus:border-primary h-11"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Email</label>
+                      <Input 
+                        type="email"
+                        value={registerForm.email}
+                        onChange={(e) => setRegisterForm({...registerForm, email: e.target.value})}
+                        placeholder="example@mail.com"
+                        className="bg-muted/50 border-2 border-border focus:border-primary h-11"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">Введите настоящий email адрес</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Пароль</label>
+                      <Input 
+                        type="password"
+                        value={registerForm.password}
+                        onChange={(e) => setRegisterForm({...registerForm, password: e.target.value})}
+                        placeholder="Придумайте пароль"
+                        className="bg-muted/50 border-2 border-border focus:border-primary h-11"
+                      />
+                    </div>
+                  </div>
+                  <Button 
+                    onClick={handleRegister}
+                    disabled={!registerForm.username || !registerForm.email || !registerForm.password}
+                    className="w-full h-11 bg-primary hover:bg-primary/90"
+                  >
+                    Зарегистрироваться
+                  </Button>
+                  <div className="text-center text-sm">
+                    <span className="text-muted-foreground">Уже есть аккаунт? </span>
+                    <button onClick={() => handleSectionChange('login')} className="text-primary hover:brightness-110">
+                      Войти
+                    </button>
+                  </div>
+                </div>
               </div>
             ) : currentSection === 'upload' ? (
               <div className="max-w-3xl mx-auto">
