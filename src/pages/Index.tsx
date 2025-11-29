@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Home, Search, User, Clock, TrendingUp, Upload, Bookmark, Video, Music, Play, ThumbsUp, ThumbsDown, MessageSquare, Headphones, History, Pause, Volume2, Settings, Maximize, SkipForward, SkipBack, Moon, Sun, Monitor, Smartphone, Mic, LogIn, UserPlus, LogOut } from 'lucide-react';
+import { Home, Search, User, Clock, TrendingUp, Upload, Bookmark, Video, Music, Play, ThumbsUp, ThumbsDown, MessageSquare, Headphones, History, Pause, Volume2, Settings, Maximize, SkipForward, SkipBack, Moon, Sun, Monitor, Smartphone, Mic, LogIn, UserPlus, LogOut, PictureInPicture2, X, Minimize2, Maximize2, Plus, List, Link } from 'lucide-react';
 import Icon from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Textarea } from '@/components/ui/textarea';
 
-type Section = 'home' | 'search' | 'channel' | 'subscriptions' | 'history' | 'trending' | 'upload' | 'saved' | 'video' | 'music' | 'podcasts' | 'login' | 'register';
+type Section = 'home' | 'search' | 'channel' | 'subscriptions' | 'history' | 'trending' | 'upload' | 'saved' | 'video' | 'music' | 'podcasts' | 'login' | 'register' | 'playlists' | 'watchlater';
 type Theme = 'dark' | 'light';
 type ViewMode = 'desktop' | 'mobile';
 type VideoQuality = '360p' | '720p' | '1080p';
@@ -16,12 +16,15 @@ interface Video {
   title: string;
   channel: string;
   channelAvatar: string;
+  channelId: string;
   views: string;
   time: string;
   thumbnail: string;
   color: string;
   likes: string;
   dislikes: string;
+  videoUrl?: string;
+  duration?: string;
 }
 
 interface Channel {
@@ -56,17 +59,36 @@ interface User {
   channelBanner?: string;
   subscribers: number;
   subscribedTo: string[];
+  watchHistory: string[];
+  playlists: Playlist[];
+}
+
+interface Playlist {
+  id: string;
+  name: string;
+  videos: string[];
+  thumbnail: string;
+}
+
+interface VideoPlayerState {
+  videoId: string;
+  isPlaying: boolean;
+  progress: number;
+  volume: number;
+  currentTime: number;
+  duration: number;
+  quality: VideoQuality;
 }
 
 const mockVideos: Video[] = [
-  { id: '1', title: 'Как создать Metro дизайн', channel: 'Design Channel', channelAvatar: 'DC', views: '1.2М', time: '2 дня назад', thumbnail: '🎨', color: 'bg-metro-blue', likes: '45К', dislikes: '234' },
-  { id: '2', title: 'TypeScript для начинающих', channel: 'Code Academy', channelAvatar: 'CA', views: '856К', time: '1 неделю назад', thumbnail: '💻', color: 'bg-metro-cyan', likes: '32К', dislikes: '120' },
-  { id: '3', title: 'React hooks подробно', channel: 'Web Dev Pro', channelAvatar: 'WD', views: '2.1М', time: '3 дня назад', thumbnail: '⚛️', color: 'bg-metro-purple', likes: '89К', dislikes: '456' },
-  { id: '4', title: 'UX дизайн паттерны', channel: 'UX Master', channelAvatar: 'UX', views: '654К', time: '5 дней назад', thumbnail: '🎯', color: 'bg-metro-green', likes: '23К', dislikes: '89' },
-  { id: '5', title: 'CSS Grid и Flexbox', channel: 'Layout School', channelAvatar: 'LS', views: '1.5М', time: '1 день назад', thumbnail: '📐', color: 'bg-metro-orange', likes: '67К', dislikes: '234' },
-  { id: '6', title: 'JavaScript ES2024', channel: 'JS Guru', channelAvatar: 'JS', views: '987К', time: '4 дня назад', thumbnail: '🚀', color: 'bg-metro-red', likes: '41К', dislikes: '178' },
-  { id: '7', title: 'Анимации в вебе', channel: 'Motion Design', channelAvatar: 'MD', views: '745К', time: '6 дней назад', thumbnail: '✨', color: 'bg-metro-yellow', likes: '28К', dislikes: '94' },
-  { id: '8', title: 'База данных SQL', channel: 'Database Pro', channelAvatar: 'DP', views: '1.8М', time: '2 дня назад', thumbnail: '🗄️', color: 'bg-metro-lime', likes: '73К', dislikes: '312' },
+  { id: '1', title: 'Как создать Metro дизайн', channel: 'Design Channel', channelAvatar: 'DC', channelId: 'ch1', views: '1.2М', time: '2 дня назад', thumbnail: '🎨', color: 'bg-metro-blue', likes: '45К', dislikes: '234', duration: '15:42' },
+  { id: '2', title: 'TypeScript для начинающих', channel: 'Code Academy', channelAvatar: 'CA', channelId: 'ch2', views: '856К', time: '1 неделю назад', thumbnail: '💻', color: 'bg-metro-cyan', likes: '32К', dislikes: '120', duration: '22:18' },
+  { id: '3', title: 'React hooks подробно', channel: 'Web Dev Pro', channelAvatar: 'WD', channelId: 'ch3', views: '2.1М', time: '3 дня назад', thumbnail: '⚛️', color: 'bg-metro-purple', likes: '89К', dislikes: '456', duration: '18:35' },
+  { id: '4', title: 'UX дизайн паттерны', channel: 'UX Master', channelAvatar: 'UX', channelId: 'ch4', views: '654К', time: '5 дней назад', thumbnail: '🎯', color: 'bg-metro-green', likes: '23К', dislikes: '89', duration: '12:47' },
+  { id: '5', title: 'CSS Grid и Flexbox', channel: 'Layout School', channelAvatar: 'LS', channelId: 'ch5', views: '1.5М', time: '1 день назад', thumbnail: '📐', color: 'bg-metro-orange', likes: '67К', dislikes: '234', duration: '25:13' },
+  { id: '6', title: 'JavaScript ES2024', channel: 'JS Guru', channelAvatar: 'JS', channelId: 'ch6', views: '987К', time: '4 дня назад', thumbnail: '🚀', color: 'bg-metro-red', likes: '41К', dislikes: '178', duration: '19:58' },
+  { id: '7', title: 'Анимации в вебе', channel: 'Motion Design', channelAvatar: 'MD', channelId: 'ch7', views: '745К', time: '6 дней назад', thumbnail: '✨', color: 'bg-metro-yellow', likes: '28К', dislikes: '94', duration: '14:22' },
+  { id: '8', title: 'База данных SQL', channel: 'Database Pro', channelAvatar: 'DP', channelId: 'ch8', views: '1.8М', time: '2 дня назад', thumbnail: '🗄️', color: 'bg-metro-lime', likes: '73К', dislikes: '312', duration: '31:05' },
 ];
 
 const mockChannels: Channel[] = [
@@ -130,6 +152,15 @@ const Index = () => {
   const [commentLink, setCommentLink] = useState({ url: '', text: '' });
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [myVideos, setMyVideos] = useState<Video[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [miniPlayer, setMiniPlayer] = useState<{ video: Video; playerState: VideoPlayerState } | null>(null);
+  const [videoPlayerStates, setVideoPlayerStates] = useState<Record<string, VideoPlayerState>>({});
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [playlists, setPlaylists] = useState<Playlist[]>([]);
+  const [showPlaylistMenu, setShowPlaylistMenu] = useState(false);
+  const [newPlaylistName, setNewPlaylistName] = useState('');
+  const [watchHistory, setWatchHistory] = useState<Video[]>([]);
+  const [recommendedVideos, setRecommendedVideos] = useState<Video[]>([]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('light', theme === 'light');
@@ -207,14 +238,15 @@ const Index = () => {
 
   const handleLogin = () => {
     if (loginForm.username && loginForm.password) {
+      const existingUser = users.find(u => u.username === loginForm.username);
+      if (!existingUser) {
+        alert('Пользователь не найден. Пожалуйста, зарегистрируйтесь.');
+        return;
+      }
       const newUser: User = {
-        id: 'user_' + Date.now(),
-        username: loginForm.username,
-        email: loginForm.username + '@metrotube.com',
-        avatar: loginForm.username.substring(0, 2).toUpperCase(),
-        channelDescription: 'Добро пожаловать на мой канал!',
-        subscribers: 0,
-        subscribedTo: [],
+        ...existingUser,
+        watchHistory: existingUser.watchHistory || [],
+        playlists: existingUser.playlists || [],
       };
       setCurrentUser(newUser);
       setIsLoggedIn(true);
@@ -224,6 +256,11 @@ const Index = () => {
 
   const handleRegister = () => {
     if (registerForm.username && registerForm.email && registerForm.password) {
+      const existingUser = users.find(u => u.username === registerForm.username);
+      if (existingUser) {
+        alert('Пользователь с таким ником уже существует. Пожалуйста, выберите другой ник.');
+        return;
+      }
       const newUser: User = {
         id: 'user_' + Date.now(),
         username: registerForm.username,
@@ -232,7 +269,10 @@ const Index = () => {
         channelDescription: 'Добро пожаловать на мой канал!',
         subscribers: 0,
         subscribedTo: [],
+        watchHistory: [],
+        playlists: [],
       };
+      setUsers([...users, newUser]);
       setCurrentUser(newUser);
       setIsLoggedIn(true);
       setCurrentSection('home');
@@ -287,12 +327,14 @@ const Index = () => {
         title: uploadForm.title,
         channel: currentUser.username,
         channelAvatar: currentUser.avatar,
+        channelId: currentUser.id,
         views: '0',
         time: 'только что',
         thumbnail: uploadThumbnail ? '🎬' : '📹',
         color: 'bg-metro-blue',
         likes: '0',
         dislikes: '0',
+        duration: '0:00',
       };
       
       setMyVideos([newVideo, ...myVideos]);
@@ -351,6 +393,129 @@ const Index = () => {
     if (count >= 1000) return `${(count / 1000).toFixed(0)}К`;
     return count.toString();
   };
+
+  const getPlayerState = (videoId: string): VideoPlayerState => {
+    return videoPlayerStates[videoId] || {
+      videoId,
+      isPlaying: false,
+      progress: 0,
+      volume: 80,
+      currentTime: 0,
+      duration: 0,
+      quality: '1080p',
+    };
+  };
+
+  const updatePlayerState = (videoId: string, updates: Partial<VideoPlayerState>) => {
+    setVideoPlayerStates(prev => ({
+      ...prev,
+      [videoId]: { ...getPlayerState(videoId), ...updates },
+    }));
+  };
+
+  const handleOpenMiniPlayer = () => {
+    if (selectedVideo) {
+      setMiniPlayer({
+        video: selectedVideo,
+        playerState: getPlayerState(selectedVideo.id),
+      });
+      setCurrentSection('home');
+    }
+  };
+
+  const handleCloseMiniPlayer = () => {
+    setMiniPlayer(null);
+  };
+
+  const handleFullscreen = () => {
+    setIsFullscreen(!isFullscreen);
+  };
+
+  const addToWatchHistory = (video: Video) => {
+    if (!isLoggedIn || !currentUser) return;
+    const exists = watchHistory.some(v => v.id === video.id);
+    if (!exists) {
+      setWatchHistory([video, ...watchHistory.slice(0, 49)]);
+    }
+  };
+
+  const handleCreatePlaylist = () => {
+    if (newPlaylistName.trim() && isLoggedIn) {
+      const newPlaylist: Playlist = {
+        id: 'playlist_' + Date.now(),
+        name: newPlaylistName,
+        videos: [],
+        thumbnail: '📋',
+      };
+      setPlaylists([...playlists, newPlaylist]);
+      setNewPlaylistName('');
+      setShowPlaylistMenu(false);
+    }
+  };
+
+  const handleAddToPlaylist = (playlistId: string, videoId: string) => {
+    setPlaylists(playlists.map(p => 
+      p.id === playlistId 
+        ? { ...p, videos: [...p.videos, videoId] }
+        : p
+    ));
+  };
+
+  const handleVideoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const videoFormats = ['video/mp4', 'video/webm', 'video/ogg', 'video/avi', 'video/mov', 'video/mkv', 'video/flv', 'video/wmv', 'video/m4v'];
+      if (videoFormats.some(format => file.type.includes(format.split('/')[1]) || file.name.toLowerCase().endsWith('.' + format.split('/')[1]))) {
+        setUploadFile(file);
+      } else {
+        alert('Поддерживаются форматы: MP4, WebM, OGG, AVI, MOV, MKV, FLV, WMV, M4V');
+      }
+    }
+  };
+
+  const handleCommentImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 100 * 1024 * 1024) {
+        alert('Размер изображения не должен превышать 100 МБ!');
+        return;
+      }
+      const imageFormats = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/bmp', 'image/svg+xml'];
+      if (imageFormats.includes(file.type)) {
+        setCommentImage(file);
+      } else {
+        alert('Поддерживаются форматы: JPG, JPEG, PNG, GIF, WEBP, BMP, SVG');
+      }
+    }
+  };
+
+  const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const imageFormats = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/bmp', 'image/svg+xml'];
+      if (imageFormats.includes(file.type)) {
+        setUploadThumbnail(file);
+      } else {
+        alert('Поддерживаются форматы: JPG, JPEG, PNG, GIF, WEBP, BMP, SVG');
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (selectedVideo) {
+      addToWatchHistory(selectedVideo);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedVideo?.id]);
+
+  useEffect(() => {
+    const recommended = mockVideos.filter(v => 
+      v.id !== selectedVideo?.id && 
+      Math.random() > 0.3
+    ).slice(0, 8);
+    setRecommendedVideos(recommended);
+     
+  }, [selectedVideo?.id]);
 
   const navItems = [
     { 
@@ -674,19 +839,19 @@ const Index = () => {
                       <div className="relative h-1 bg-white/30 cursor-pointer" onClick={(e) => {
                         const rect = e.currentTarget.getBoundingClientRect();
                         const percent = ((e.clientX - rect.left) / rect.width) * 100;
-                        setVideoProgress(percent);
+                        updatePlayerState(selectedVideo.id, { progress: percent });
                       }}>
-                        <div className="absolute h-full bg-primary transition-all" style={{ width: `${videoProgress}%` }} />
+                        <div className="absolute h-full bg-primary transition-all" style={{ width: `${getPlayerState(selectedVideo.id).progress}%` }} />
                       </div>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <button onClick={() => setIsPlaying(!isPlaying)} className="metro-control w-10 h-10">
-                            <Icon name={isPlaying ? 'Pause' : 'Play'} size={20} />
+                          <button onClick={() => updatePlayerState(selectedVideo.id, { isPlaying: !getPlayerState(selectedVideo.id).isPlaying })} className="metro-control w-10 h-10">
+                            <Icon name={getPlayerState(selectedVideo.id).isPlaying ? 'Pause' : 'Play'} size={20} />
                           </button>
-                          <button onClick={handleSkipBack} className="metro-control w-8 h-8">
+                          <button onClick={() => updatePlayerState(selectedVideo.id, { progress: Math.max(getPlayerState(selectedVideo.id).progress - 10, 0) })} className="metro-control w-8 h-8">
                             <Icon name="SkipBack" size={16} />
                           </button>
-                          <button onClick={handleSkipForward} className="metro-control w-8 h-8">
+                          <button onClick={() => updatePlayerState(selectedVideo.id, { progress: Math.min(getPlayerState(selectedVideo.id).progress + 10, 100) })} className="metro-control w-8 h-8">
                             <Icon name="SkipForward" size={16} />
                           </button>
                           <div className="flex items-center gap-2 bg-black/50 px-3 py-2">
@@ -697,27 +862,30 @@ const Index = () => {
                               type="range" 
                               min="0" 
                               max="100" 
-                              value={volume} 
-                              onChange={(e) => setVolume(Number(e.target.value))}
+                              value={getPlayerState(selectedVideo.id).volume} 
+                              onChange={(e) => updatePlayerState(selectedVideo.id, { volume: Number(e.target.value) })}
                               className="w-20 h-1 accent-primary cursor-pointer"
                             />
-                            <span className="text-white text-xs w-8 font-medium">{volume}%</span>
+                            <span className="text-white text-xs w-8 font-medium">{getPlayerState(selectedVideo.id).volume}%</span>
                           </div>
+                          <button onClick={handleOpenMiniPlayer} className="metro-control w-8 h-8" title="Мини-плеер">
+                            <Icon name="PictureInPicture2" size={16} />
+                          </button>
                         </div>
                         <div className="flex items-center gap-3">
-                          <span className="text-white text-sm font-medium bg-black/50 px-3 py-1">{Math.floor(videoProgress / 100 * 10)}:{Math.floor((videoProgress / 100 * 600) % 60).toString().padStart(2, '0')} / 10:00</span>
+                          <span className="text-white text-sm font-medium bg-black/50 px-3 py-1">{Math.floor(getPlayerState(selectedVideo.id).progress / 100 * 10)}:{Math.floor((getPlayerState(selectedVideo.id).progress / 100 * 600) % 60).toString().padStart(2, '0')} / {selectedVideo.duration || '10:00'}</span>
                           <div className="relative">
                             <button onClick={() => setShowQualityMenu(!showQualityMenu)} className="metro-control w-8 h-8">
                               <Icon name="Settings" size={16} />
                             </button>
                             {showQualityMenu && (
-                              <div className="absolute bottom-full right-0 mb-2 bg-black/90 border border-white/20 p-2 space-y-1">
+                              <div className="absolute bottom-full right-0 mb-2 bg-black/90 border border-white/20 p-2 space-y-1 z-50">
                                 <div className="text-white text-xs mb-2 px-2">Качество</div>
                                 {(['360p', '720p', '1080p'] as VideoQuality[]).map(q => (
                                   <button
                                     key={q}
-                                    onClick={() => { setQuality(q); setShowQualityMenu(false); }}
-                                    className={`w-full px-4 py-1 text-sm text-left ${quality === q ? 'bg-primary text-white' : 'text-white/80 hover:bg-white/10'}`}
+                                    onClick={() => { updatePlayerState(selectedVideo.id, { quality: q }); setShowQualityMenu(false); }}
+                                    className={`w-full px-4 py-1 text-sm text-left ${getPlayerState(selectedVideo.id).quality === q ? 'bg-primary text-white' : 'text-white/80 hover:bg-white/10'}`}
                                   >
                                     {q}
                                   </button>
@@ -725,8 +893,8 @@ const Index = () => {
                               </div>
                             )}
                           </div>
-                          <button className="metro-control w-8 h-8">
-                            <Icon name="Maximize" size={16} />
+                          <button onClick={handleFullscreen} className="metro-control w-8 h-8">
+                            <Icon name={isFullscreen ? 'Minimize2' : 'Maximize'} size={16} />
                           </button>
                         </div>
                       </div>
@@ -1048,7 +1216,112 @@ const Index = () => {
               <h2 className="text-4xl font-light">{navItems.find(item => item.id === currentSection)?.label || 'Главная'}</h2>
             </div>
 
-            {currentSection === 'podcasts' ? (
+            {currentSection === 'history' ? (
+              <div className="space-y-6">
+                {!isLoggedIn ? (
+                  <div className="bg-card/30 p-12 text-center border border-border">
+                    <Icon name="Clock" size={48} className="mx-auto text-muted-foreground mb-4" />
+                    <p className="text-muted-foreground mb-4">Войдите, чтобы увидеть историю просмотров</p>
+                    <button onClick={() => handleSectionChange('login')} className="bg-primary px-6 py-2 hover:brightness-110 transition-all">
+                      Войти
+                    </button>
+                  </div>
+                ) : watchHistory.length === 0 ? (
+                  <div className="bg-card/30 p-12 text-center border border-border">
+                    <Icon name="Clock" size={48} className="mx-auto text-muted-foreground mb-4" />
+                    <p className="text-muted-foreground">История просмотров пуста</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {watchHistory.map((video) => (
+                      <div
+                        key={video.id}
+                        onClick={() => handleVideoClick(video)}
+                        className="flex gap-4 cursor-pointer hover:bg-muted/30 p-4 transition-colors border-l-2 border-transparent hover:border-primary"
+                      >
+                        <div className={`${video.color} w-48 aspect-video flex items-center justify-center text-4xl flex-shrink-0`}>
+                          {video.thumbnail}
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-normal text-lg mb-2">{video.title}</h4>
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className={`w-6 h-6 ${mockChannels.find(c => c.name === video.channel)?.color || 'bg-primary'} flex items-center justify-center text-xs font-semibold`}>
+                              {video.channelAvatar}
+                            </div>
+                            <span className="text-sm text-muted-foreground">{video.channel}</span>
+                          </div>
+                          <p className="text-sm text-muted-foreground">{video.views} просмотров • {video.time}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : currentSection === 'playlists' ? (
+              <div className="space-y-6">
+                {!isLoggedIn ? (
+                  <div className="bg-card/30 p-12 text-center border border-border">
+                    <Icon name="List" size={48} className="mx-auto text-muted-foreground mb-4" />
+                    <p className="text-muted-foreground mb-4">Войдите, чтобы создавать плейлисты</p>
+                    <button onClick={() => handleSectionChange('login')} className="bg-primary px-6 py-2 hover:brightness-110 transition-all">
+                      Войти
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-2xl font-light">Мои плейлисты</h3>
+                      <button 
+                        onClick={() => setShowPlaylistMenu(true)} 
+                        className="bg-primary px-4 py-2 hover:brightness-110 transition-all flex items-center gap-2"
+                      >
+                        <Icon name="Plus" size={18} />
+                        Создать плейлист
+                      </button>
+                    </div>
+                    {showPlaylistMenu && (
+                      <div className="bg-card/50 border border-border p-4">
+                        <Input 
+                          value={newPlaylistName}
+                          onChange={(e) => setNewPlaylistName(e.target.value)}
+                          placeholder="Название плейлиста"
+                          className="mb-3"
+                        />
+                        <div className="flex gap-2">
+                          <Button onClick={handleCreatePlaylist} disabled={!newPlaylistName.trim()}>
+                            Создать
+                          </Button>
+                          <Button variant="outline" onClick={() => { setShowPlaylistMenu(false); setNewPlaylistName(''); }}>
+                            Отмена
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                    {playlists.length === 0 ? (
+                      <div className="bg-card/30 p-12 text-center border border-border">
+                        <Icon name="List" size={48} className="mx-auto text-muted-foreground mb-4" />
+                        <p className="text-muted-foreground">У вас пока нет плейлистов</p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                        {playlists.map((playlist) => (
+                          <div
+                            key={playlist.id}
+                            className="cursor-pointer hover:brightness-110 transition-all"
+                          >
+                            <div className="bg-metro-purple aspect-video flex flex-col items-center justify-center text-6xl mb-3">
+                              {playlist.thumbnail}
+                            </div>
+                            <h4 className="font-normal text-lg mb-1">{playlist.name}</h4>
+                            <p className="text-sm text-muted-foreground">{playlist.videos.length} видео</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            ) : currentSection === 'podcasts' ? (
               <div className="space-y-6">
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                   {mockPodcasts.map((podcast) => (
@@ -1379,15 +1652,8 @@ const Index = () => {
                       </div>
                       <input 
                         type="file" 
-                        accept="video/*"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file && file.size > 10 * 1024 * 1024 * 1024) {
-                            alert('Размер файла превышает 10 ГБ!');
-                            return;
-                          }
-                          setUploadFile(file || null);
-                        }}
+                        accept="video/*,.mp4,.webm,.ogg,.avi,.mov,.mkv,.flv,.wmv,.m4v"
+                        onChange={handleVideoFileChange}
                         className="hidden"
                         id="video-upload"
                       />
@@ -1398,8 +1664,8 @@ const Index = () => {
                         <div className="mt-4">
                           <input 
                             type="file" 
-                            accept="image/*"
-                            onChange={(e) => setUploadThumbnail(e.target.files?.[0] || null)}
+                            accept="image/*,.jpg,.jpeg,.png,.gif,.webp,.bmp,.svg"
+                            onChange={handleThumbnailChange}
                             className="hidden"
                             id="thumbnail-upload"
                           />
@@ -1487,6 +1753,54 @@ const Index = () => {
           </>
         )}
       </div>
+
+      {miniPlayer && (
+        <div className="fixed bottom-4 right-4 w-96 bg-background border-2 border-primary shadow-2xl z-50 overflow-hidden">
+          <div className="relative group">
+            <div className={`${miniPlayer.video.color} aspect-video flex items-center justify-center text-4xl relative`}>
+              {miniPlayer.video.thumbnail}
+              <button 
+                onClick={handleCloseMiniPlayer}
+                className="absolute top-2 right-2 bg-red-600 hover:bg-red-700 w-8 h-8 flex items-center justify-center transition-all"
+              >
+                <Icon name="X" size={16} />
+              </button>
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-2">
+                <div className="space-y-2">
+                  <div className="relative h-1 bg-white/30 cursor-pointer" onClick={(e) => {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const percent = ((e.clientX - rect.left) / rect.width) * 100;
+                    updatePlayerState(miniPlayer.video.id, { progress: percent });
+                  }}>
+                    <div className="absolute h-full bg-primary transition-all" style={{ width: `${getPlayerState(miniPlayer.video.id).progress}%` }} />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <button 
+                        onClick={() => updatePlayerState(miniPlayer.video.id, { isPlaying: !getPlayerState(miniPlayer.video.id).isPlaying })} 
+                        className="bg-white hover:bg-gray-200 w-7 h-7 flex items-center justify-center transition-all"
+                      >
+                        <Icon name={getPlayerState(miniPlayer.video.id).isPlaying ? 'Pause' : 'Play'} size={14} className="text-black" />
+                      </button>
+                      <button 
+                        onClick={() => {
+                          setSelectedVideo(miniPlayer.video);
+                          setCurrentSection('video');
+                          setMiniPlayer(null);
+                        }}
+                        className="bg-white hover:bg-gray-200 w-7 h-7 flex items-center justify-center transition-all"
+                      >
+                        <Icon name="Maximize2" size={14} className="text-black" />
+                      </button>
+                    </div>
+                    <span className="text-white text-xs font-medium">{miniPlayer.video.title.slice(0, 20)}...</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
