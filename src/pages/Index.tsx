@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Home, Search, User, Clock, TrendingUp, Upload, Bookmark, Video, Music, Play, ThumbsUp, ThumbsDown, MessageSquare } from 'lucide-react';
+import { Home, Search, User, Clock, TrendingUp, Upload, Bookmark, Video, Music, Play, ThumbsUp, ThumbsDown, MessageSquare, Headphones, History } from 'lucide-react';
 import Icon from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -106,7 +106,8 @@ const Index = () => {
       label: 'Главная', 
       color: 'bg-metro-blue', 
       size: 'logo',
-      content: <div className="text-5xl">📺</div>
+      primaryContent: <div className="text-5xl">📺</div>,
+      altContent: <div className="text-3xl">🎬</div>
     },
     { 
       id: 'search' as Section, 
@@ -114,7 +115,8 @@ const Index = () => {
       label: 'Поиск', 
       color: 'bg-metro-cyan', 
       size: 'normal',
-      content: <div className="text-xs mt-2 opacity-80">{searchSuggestions[Math.floor(Math.random() * searchSuggestions.length)]}</div>
+      primaryContent: null,
+      altContent: <div className="text-xs mt-1 opacity-90">{searchSuggestions.join(' • ')}</div>
     },
     { 
       id: 'channel' as Section, 
@@ -122,7 +124,8 @@ const Index = () => {
       label: 'Мой канал', 
       color: 'bg-metro-purple', 
       size: 'wide',
-      content: null
+      primaryContent: null,
+      altContent: <div className="text-xs mt-1 opacity-90">245К подписчиков</div>
     },
     { 
       id: 'subscriptions' as Section, 
@@ -130,15 +133,17 @@ const Index = () => {
       label: 'Подписки', 
       color: 'bg-metro-green', 
       size: 'normal',
-      content: <div className="text-xs mt-2 opacity-80 text-center">{mockChannels[0].name}</div>
+      primaryContent: null,
+      altContent: <div className="text-xs mt-1 opacity-90 text-center leading-tight">{mockChannels.slice(0,2).map(c => c.name.split(' ')[0]).join(', ')}</div>
     },
     { 
       id: 'music' as Section, 
-      icon: Music, 
+      icon: Headphones, 
       label: 'Музыка', 
       color: 'bg-metro-orange', 
       size: 'normal',
-      content: <div className="text-xs mt-2 opacity-80">{mockMusic[Math.floor(Math.random() * mockMusic.length)].artist}</div>
+      primaryContent: null,
+      altContent: <div className="text-xs mt-1 opacity-90 text-center leading-tight">{mockMusic.map(m => m.artist.split(' ')[0]).join(', ')}</div>
     },
     { 
       id: 'trending' as Section, 
@@ -146,7 +151,8 @@ const Index = () => {
       label: 'Рекомендации', 
       color: 'bg-metro-red', 
       size: 'wide',
-      content: <div className="text-xs mt-2 opacity-80">{trendingYoutubers[0]}, {trendingYoutubers[1]}</div>
+      primaryContent: null,
+      altContent: <div className="text-xs mt-1 opacity-90">{trendingYoutubers.join(' • ')}</div>
     },
     { 
       id: 'upload' as Section, 
@@ -154,7 +160,8 @@ const Index = () => {
       label: 'Загрузить', 
       color: 'bg-metro-yellow', 
       size: 'normal',
-      content: null
+      primaryContent: null,
+      altContent: <div className="text-xs mt-1 opacity-90">Добавить видео</div>
     },
     { 
       id: 'saved' as Section, 
@@ -162,7 +169,8 @@ const Index = () => {
       label: 'Сохраненные', 
       color: 'bg-metro-lime', 
       size: 'normal',
-      content: null
+      primaryContent: null,
+      altContent: <div className="text-xs mt-1 opacity-90">{mockVideos.length} видео</div>
     },
   ];
 
@@ -219,16 +227,28 @@ const Index = () => {
               style={{ animationDelay: `${index * 0.5}s` }}
             >
               {item.size === 'logo' ? (
-                <div className="tile-content w-full h-full flex flex-col items-center justify-center">
-                  {item.content}
-                  <span className="text-xl font-normal mt-2">{item.label}</span>
-                </div>
+                <>
+                  <div className="tile-content absolute inset-0 flex flex-col items-center justify-center">
+                    {item.primaryContent}
+                    <span className="text-xl font-normal mt-2">{item.label}</span>
+                  </div>
+                  <div className="tile-content-alt absolute inset-0 flex flex-col items-center justify-center">
+                    {item.altContent}
+                    <span className="text-xl font-normal mt-2">{item.label}</span>
+                  </div>
+                </>
               ) : (
-                <div className="tile-content w-full h-full flex flex-col items-center justify-center gap-2 px-3">
-                  <Icon name={item.icon.name as any} size={item.size === 'wide' ? 36 : 32} />
-                  <span className="text-sm font-normal">{item.label}</span>
-                  {item.content && <div className="w-full">{item.content}</div>}
-                </div>
+                <>
+                  <div className="tile-content absolute inset-0 flex flex-col items-center justify-center gap-2 px-3">
+                    <Icon name={item.icon.name as any} size={item.size === 'wide' ? 36 : 32} />
+                    <span className="text-sm font-normal">{item.label}</span>
+                  </div>
+                  <div className="tile-content-alt absolute inset-0 flex flex-col items-center justify-center gap-2 px-3">
+                    <Icon name={item.icon.name as any} size={item.size === 'wide' ? 28 : 24} />
+                    <span className="text-xs font-normal">{item.label}</span>
+                    {item.altContent && <div className="w-full text-center">{item.altContent}</div>}
+                  </div>
+                </>
               )}
               {currentSection === item.id && (
                 <div className="absolute bottom-0 right-0 w-3 h-3 bg-white/80" />
@@ -557,33 +577,112 @@ const Index = () => {
               </div>
             ) : currentSection === 'search' ? (
               <div className="space-y-6">
-                <div className="text-muted-foreground text-lg font-light">
-                  {searchQuery ? `Результаты поиска: "${searchQuery}"` : 'Введите запрос для поиска видео'}
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {mockVideos
-                    .filter(video => 
-                      searchQuery === '' || 
-                      video.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                      video.channel.toLowerCase().includes(searchQuery.toLowerCase())
-                    )
-                    .map((video) => (
-                      <div
-                        key={video.id}
-                        onClick={() => handleVideoClick(video)}
-                        className="cursor-pointer group"
-                      >
-                        <div className={`${video.color} aspect-video metro-tile flex items-center justify-center text-6xl mb-3 shadow-md`}>
-                          {video.thumbnail}
-                        </div>
-                        <h3 className="font-normal mb-1 line-clamp-2 group-hover:text-primary transition-colors text-base">
-                          {video.title}
-                        </h3>
-                        <p className="text-sm text-muted-foreground">{video.channel}</p>
-                        <p className="text-sm text-muted-foreground">{video.views} • {video.time}</p>
+                {!searchQuery ? (
+                  <>
+                    <div className="text-muted-foreground text-lg font-light mb-6">
+                      Популярные категории
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                      {['Обучение', 'Музыка', 'Игры', 'Спорт', 'Новости', 'Развлечения', 'Технологии', 'Кулинария', 'Стройка', 'Мода'].map((cat, i) => (
+                        <button
+                          key={i}
+                          onClick={() => setSearchQuery(cat)}
+                          className={`${
+                            ['bg-metro-blue', 'bg-metro-purple', 'bg-metro-green', 'bg-metro-orange', 'bg-metro-red', 
+                             'bg-metro-cyan', 'bg-metro-yellow', 'bg-metro-lime', 'bg-primary', 'bg-accent'][i]
+                          } metro-tile aspect-[2/1] flex items-center justify-center text-white font-medium hover:brightness-110 transition-all`}
+                        >
+                          {cat}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="mt-8">
+                      <h3 className="text-2xl font-light mb-4">Популярные сейчас</h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        {mockVideos.slice(0, 4).map((video) => (
+                          <div
+                            key={video.id}
+                            onClick={() => handleVideoClick(video)}
+                            className="cursor-pointer group"
+                          >
+                            <div className={`${video.color} aspect-video metro-tile flex items-center justify-center text-6xl mb-3 shadow-md relative`}>
+                              {video.thumbnail}
+                              <div className="absolute top-2 left-2 bg-metro-red px-2 py-1 text-xs font-semibold flex items-center gap-1">
+                                <Icon name="TrendingUp" size={12} />
+                                ТРЕНД
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 mb-2">
+                              <div className={`w-6 h-6 ${mockChannels.find(c => c.name === video.channel)?.color || 'bg-primary'} flex items-center justify-center text-[10px] font-semibold`}>
+                                {video.channelAvatar}
+                              </div>
+                              <h3 className="font-normal line-clamp-2 group-hover:text-primary transition-colors text-base flex-1">
+                                {video.title}
+                              </h3>
+                            </div>
+                            <p className="text-sm text-muted-foreground pl-8">{video.channel}</p>
+                            <p className="text-sm text-muted-foreground pl-8">{video.views} • {video.time}</p>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <div className="text-muted-foreground text-lg font-light">
+                        Результаты поиска: <span className="text-foreground font-normal">"{searchQuery}"</span>
+                      </div>
+                      <button
+                        onClick={() => setSearchQuery('')}
+                        className="text-sm text-primary hover:brightness-110 transition-all"
+                      >
+                        Очистить
+                      </button>
+                    </div>
+                    <div className="flex gap-3 flex-wrap">
+                      {['Все', 'Видео', 'Каналы', 'Плейлисты'].map((filter, i) => (
+                        <button
+                          key={i}
+                          className={`px-4 py-2 ${
+                            i === 0 ? 'bg-primary text-white' : 'bg-muted/50 text-foreground hover:bg-muted'
+                          } transition-all text-sm font-medium`}
+                        >
+                          {filter}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                      {mockVideos
+                        .filter(video => 
+                          searchQuery === '' || 
+                          video.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          video.channel.toLowerCase().includes(searchQuery.toLowerCase())
+                        )
+                        .map((video) => (
+                          <div
+                            key={video.id}
+                            onClick={() => handleVideoClick(video)}
+                            className="cursor-pointer group"
+                          >
+                            <div className={`${video.color} aspect-video metro-tile flex items-center justify-center text-6xl mb-3 shadow-md`}>
+                              {video.thumbnail}
+                            </div>
+                            <div className="flex items-center gap-2 mb-2">
+                              <div className={`w-6 h-6 ${mockChannels.find(c => c.name === video.channel)?.color || 'bg-primary'} flex items-center justify-center text-[10px] font-semibold`}>
+                                {video.channelAvatar}
+                              </div>
+                              <h3 className="font-normal line-clamp-2 group-hover:text-primary transition-colors text-base flex-1">
+                                {video.title}
+                              </h3>
+                            </div>
+                            <p className="text-sm text-muted-foreground pl-8">{video.channel}</p>
+                            <p className="text-sm text-muted-foreground pl-8">{video.views} • {video.time}</p>
+                          </div>
+                        ))}
+                    </div>
+                  </>
+                )}
               </div>
             ) : currentSection === 'upload' ? (
               <div className="max-w-3xl mx-auto">

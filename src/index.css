@@ -103,7 +103,7 @@
   }
 
   .tile-content {
-    animation: tile-flip 8s infinite;
+    animation: tile-flip 10s ease-in-out infinite;
   }
 
   @keyframes tile-flip {
@@ -124,6 +124,27 @@
     100% {
       transform: translateY(0);
       opacity: 1;
+    }
+  }
+
+  .tile-content-alt {
+    animation: tile-flip-alt 10s ease-in-out infinite;
+  }
+
+  @keyframes tile-flip-alt {
+    0%,
+    45% {
+      transform: translateY(100%);
+      opacity: 0;
+    }
+    50%,
+    95% {
+      transform: translateY(0);
+      opacity: 1;
+    }
+    100% {
+      transform: translateY(-100%);
+      opacity: 0;
     }
   }
 
